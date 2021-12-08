@@ -1,13 +1,13 @@
-# 3.6 バリア同期
+# 3.6 배리어 동기
 
-## ファイル
+## 파일
 
-- 3_6_1_barrier_spin.c: p78
-- 3_6_2_barrier_pthreads.c: p79
+- `3_6_1_barrier_spin.c`: pxxx
+- `3_6_2_barrier_pthreads.c`: pxxx
 
-## コンパイル
+## 컴파일
 
-makeを実行すると、.oファイル、または実行ファイルが生成されます。
+`make`를 실행하면 `.o` 파일, 또는 실행 파일이 생성됩니다.
 
 ```sh
 $ make

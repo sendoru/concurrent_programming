@@ -12,7 +12,7 @@ static mut CNT: AtomicUsize = AtomicUsize::new(0);
 
 fn main() {
     let mut v = Vec::new();
-    // SEM_NUMだけ同時に実行可能なセマフォ
+    // SEM_NUM만큼 동시 실행 가능한 세마포
     let sem = Arc::new(Semaphore::new(SEM_NUM));
 
     for i in 0..NUM_THREADS {
@@ -21,7 +21,7 @@ fn main() {
             for _ in 0..NUM_LOOP {
                 s.wait();
 
-                // アトミックにインクリメントとデクリメント
+                // 아토믹하게 인크리먼트 및 디크리먼트
                 unsafe { CNT.fetch_add(1, Ordering::SeqCst) };
                 let n = unsafe { CNT.load(Ordering::SeqCst) };
                 println!("semaphore: i = {}, CNT = {}", i, n);

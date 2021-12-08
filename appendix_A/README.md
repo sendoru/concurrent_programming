@@ -1,8 +1,8 @@
-# Appendix A AArch64アーキテクチャ
+# Appendix A AArch64 아키텍처
 
-## コンパイル
+## 컴파일
 
-makeを実行するとコンパイルします。AArch64環境のみ実行可能です。
+`make`를 실행하면 컴파일됩니다.AArc64 환경에서만 실행 할 수 있습니다.
 
 ```sh
 $ make

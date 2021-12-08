@@ -1,17 +1,17 @@
-# 3.3 ミューテックス
+# 3.3 뮤텍스
 
-## ファイル
+## 파일
 
-- 3_3_bad_mutex.c: p64
-- 3_3_good_mutex.c: p66
-- 3_3_1_spinlock_1.c: p67上
-- 3_3_1_spinlock_2.c: p67下
-- 3_3_1_use_spinlock.c: p68上
-- 3_3_2_pthreads_mutex.c: p68下
+- `3_3_bad_mutex.c`: p##
+- `3_3_good_mutex.c`: p##
+- `3_3_1_spinlock_1.c`: p##
+- `3_3_1_spinlock_2.c`: p##
+- `3_3_1_use_spinlock.c`: p##
+- `3_3_2_pthreads_mutex.c`: p##
 
-## コンパイル
+## 컴파일
 
-makeを実行すると、.oファイル、または実行ファイルが生成されます。
+`make`를 실행하면 `.o` 파일, 및 실행 파일이 생성됩니다.
 
 ```sh
 $ make

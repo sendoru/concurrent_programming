@@ -1,8 +1,8 @@
-# 4.6 シグナル
+# 4.6 시그널
 
 ## ch4_6_signal_c
 
-ch4_6_signal_cはC言語のため、makeでコンパイル後に実行して下さい
+`ch4_6_signal_c`는 C 언어이므로 `make`로 컴파일 한 뒤 실행합니다.
 
 ```sh
 $ cd ch4_6_signal_c
@@ -12,7 +12,7 @@ $ ./signal_c
 
 ## ch4_6_signal_rust
 
-ch4_6_signal_rustはRust言語のため、cargoでコンパイル・実行して下さい。
+`ch4_6_signal_rust`는 Rust 언어이므로 `cargo`로 컴파일 및 실행합니다.
 
 ```sh
 $ cd ch4_6_signal_rust

@@ -10,20 +10,20 @@ void barrier(volatile int *cnt, int max) {
         perror("pthread_mutex_lock"); exit(-1);
     }
 
-    (*cnt)++; // <1>
+    (*cnt)++; // ❶
 
-    if (*cnt == max) { // <2>
-        // 全プロセスが揃ったので通知 <3>
+    if (*cnt == max) { // ❷
+        // 모든 프로세스가 모였으므로 알림 ❸
         if (pthread_cond_broadcast(&barrier_cond) != 0) {
             perror("pthread_cond_broadcast"); exit(-1);
         }
     } else {
-        do { // 全プロセスが揃うまで待機 <4>
+        do { // 모든 프로세스가 모일 때까지 대기 ❹
             if (pthread_cond_wait(&barrier_cond,
                                   &barrier_mut) != 0) {
                 perror("pthread_cond_wait"); exit(-1);
             }
-        } while (*cnt < max); // 擬似覚醒のための条件
+        } while (*cnt < max); // 의사 각성을 위한 조건
     }
 
     if (pthread_mutex_unlock(&barrier_mut) != 0) {

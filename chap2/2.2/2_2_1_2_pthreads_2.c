@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-// スレッド用関数
+// 스레드용 함수
 void *thread_func(void *arg) {
     for (int i = 0; i < 5; i++) {
         printf("i = %d\n", i);
@@ -13,27 +13,27 @@ void *thread_func(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-    // アトリビュートを初期化 <1>
+    // 어트리뷰트 초기화 ❶
     pthread_attr_t attr;
     if (pthread_attr_init(&attr) != 0) {
         perror("pthread_attr_init");
         return -1;
     }
 
-    // デタッチスレッドに設定 <2>
+    // 디태치 스레드로 설정 ❷
     if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
         perror("pthread_attr_setdetachstate");
         return -1;
     }
 
-    // アトリビュートを指定してスレッド生成
+    // 어트리뷰터를 지정해 스레드 생성
     pthread_t th;
     if (pthread_create(&th, &attr, thread_func, NULL) != 0) {
-        perror("pthread_create");
+        perror("pthread_join");
         return -1;
     }
 
-    // アトリビュート破棄
+    // 어트리뷰트 파기
     if (pthread_attr_destroy(&attr) != 0) {
         perror("pthread_attr_destroy");
         return -1;

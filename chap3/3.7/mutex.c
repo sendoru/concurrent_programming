@@ -1,6 +1,6 @@
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 void do_lock() {
-    pthread_mutex_lock(&lock); // ミューテックス
+    pthread_mutex_lock(&lock); // 뮤텍스
     for (uint64_t i = 0; i < HOLDTIME; i++) {
         asm volatile("nop");
     }

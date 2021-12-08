@@ -1,9 +1,9 @@
 def hello():
     print('Hello,', end='')
-    yield  # ここで中断、再開 <1>
+    yield  # 여기에서 중단, 재개 ❶
     print('World!')
-    yield  # ここまで実行 (2)
+    yield  # 여기까지 실행 ❷
 
-h = hello()  # イテレータを生成
-h.__next__() # 1まで実行し中断
-h.__next__() # 1から再開し2まで実行
+h = hello()  # 이터레이터를 생성
+h.__next__() # 1까지 실행하고 중단
+h.__next__() # 1에서 재개하고 2까지 실행

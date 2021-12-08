@@ -1,18 +1,18 @@
-# 3.7 Readers-Writerロック
+# 3.7 Readers-Writer록
 
-## ファイル
+## 파일
 
-- 3_7_1_rwlock_spin.c: p81, p82
-- 3_7_2_rwlock_pthreads.c: p83
-- 3_7_3_performance.c: p84下
-  - empty.c: p86下
-  - mutex.c: p87の1番目
-  - rwlock.c: p87の2番目
-  - rwlock_wr.c: p87の3番目
+- `3_7_1_rwlock_spin.c`: p##, p##
+- `3_7_2_rwlock_pthreads.c`: p##
+- `3_7_3_performance.c`: p##
+  - `empty.c`: p##
+  - `mutex.c`: p##의 1번째
+  - `rwlock.c`: p##의 2번째
+  - `rwlock_wr.c`: p##의 3번째
 
-## コンパイル
+## 컴파일
 
-makeを実行すると、.oファイル、または実行ファイルが生成されます。
+`make`를 실행하면 `.o` 파일, 또는 실행 파일이 생성됩니다.
 
 ```sh
 $ make

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-void barrier(volatile int *cnt, int max) { // <1>
-    __sync_fetch_and_add(cnt, 1); // <2>
-    while (*cnt < max); // <3>
+void barrier(volatile int *cnt, int max) { // ❶
+    __sync_fetch_and_add(cnt, 1); // ❷
+    while (*cnt < max); // ❸
 }

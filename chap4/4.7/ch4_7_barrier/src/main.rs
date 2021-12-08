@@ -1,18 +1,18 @@
-use std::cell::UnsafeCell; // <1>
-use std::ops::{Deref, DerefMut}; // <2>
-use std::sync::atomic::{AtomicBool, Ordering}; // <3>
+use std::cell::UnsafeCell; // ❶
+use std::ops::{Deref, DerefMut}; // ❷
+use std::sync::atomic::{AtomicBool, Ordering}; // ❸
 use std::sync::Arc;
 
 const NUM_THREADS: usize = 4;
 const NUM_LOOP: usize = 100000;
 
-// スピンロック用の型 <4>
+// 스핀록용 타입 ❹
 struct SpinLock<T> {
-    lock: AtomicBool,    // ロック用共有変数
-    data: UnsafeCell<T>, // 保護対象データ
+    lock: AtomicBool,    // 록용 공유 변수
+    data: UnsafeCell<T>, // 보호 대상 데이터
 }
 
-// ロックの解放および、ロック中に保護対象データを操作するための型 <5>
+// 록 해제 및록 중에 보호 대상 데이터를 조작하기 위한 타입 ❺
 struct SpinLockGuard<'a, T> {
     spin_lock: &'a SpinLock<T>,
 }
@@ -25,40 +25,40 @@ impl<T> SpinLock<T> {
         }
     }
 
-    // ロック関数 <6>
+    // 록 함수 ❻
     fn lock(&self) -> SpinLockGuard<T> {
         loop {
-            // ロック用共有変数がfalseとなるまで待機
+            // 록용 공유 변수가 false가 될 때까지 대기
             while self.lock.load(Ordering::Relaxed) {}
 
-            // ロック用共有変数をアトミックに書き込み
+            // 록용 공유 변수를 아토믹하게 씀
             if let Ok(_) =
                 self.lock
                     .compare_exchange_weak(
-                        false, // falseなら
-                        true,  // trueを書き込み
-                        Ordering::Acquire, // 成功時のオーダー
-                        Ordering::Relaxed) // 失敗時のオーダー
+                        false, // false이면
+                        true,  // true를 쓴다
+                        Ordering::Acquire, // 성공 시의 오더
+                        Ordering::Relaxed) // 실패 시의 오더
             {
                 break;
             }
         }
-        SpinLockGuard { spin_lock: self } // <7>
+        SpinLockGuard { spin_lock: self } // ❼
     }
 }
 
-// SpinLock型はスレッド間で共有可能と指定
-unsafe impl<T> Sync for SpinLock<T> {} // <8>
-unsafe impl<T> Send for SpinLock<T> {} // <9>
+// SpinLock 타입은 스레드 사이에서 공유 가능하도록 지정
+unsafe impl<T> Sync for SpinLock<T> {} // ❽
+unsafe impl<T> Send for SpinLock<T> {} // ❾
 
-// ロック獲得後に自動で解放されるようにDropトレイトを実装 <10>
+// 록 획득 후에 자동으로 해제되도록 Drop 트레이트를 구현 ❿
 impl<'a, T> Drop for SpinLockGuard<'a, T> {
     fn drop(&mut self) {
         self.spin_lock.lock.store(false, Ordering::Release);
     }
 }
 
-// 保護対象データのimmutableな参照外し <11>
+// 보호 대상 데이터의 이뮤터블한 참조 제외 ⓫
 impl<'a, T> Deref for SpinLockGuard<'a, T> {
     type Target = T;
 
@@ -67,7 +67,7 @@ impl<'a, T> Deref for SpinLockGuard<'a, T> {
     }
 }
 
-// 保護対象データのmutableな参照外し <12>
+// 보호 대상 데이터의 뮤터블한 참조 제외 ⓬
 impl<'a, T> DerefMut for SpinLockGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.spin_lock.data.get() }
@@ -80,10 +80,10 @@ fn main() {
 
     for _ in 0..NUM_THREADS {
         let lock0 = lock.clone();
-        // スレッド生成
+        // 스레드 생성
         let t = std::thread::spawn(move || {
             for _ in 0..NUM_LOOP {
-                // ロック
+                // 록
                 let mut data = lock0.lock();
                 *data += 1;
             }

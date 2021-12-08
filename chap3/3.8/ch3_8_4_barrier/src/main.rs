@@ -1,18 +1,18 @@
-use std::sync::{Arc, Barrier}; // <1>
+use std::sync::{Arc, Barrier}; // ❶
 use std::thread;
 
 fn main() {
-    // スレッドハンドラを保存するベクタ
-    let mut v = Vec::new(); // <2>
+    // 스레드 핸들러를 저장하는 벡터
+    let mut v = Vec::new(); // ❷
 
-    // 10スレッド分のバリア同期をArcで包む
-    let barrier = Arc::new(Barrier::new(10)); // <3>
+    // 10 스레드만큼의 배리어 동기를 Arc로 감쌈
+    let barrier = Arc::new(Barrier::new(10)); // ❸
 
-    // 10スレッド起動
+    // 10 스레드 실행
     for _ in 0..10 {
         let b = barrier.clone();
         let th = thread::spawn(move || {
-            b.wait(); // バリア同期 <4>
+            b.wait(); // 배리어 동기 ❹
             println!("finished barrier");
         });
         v.push(th);

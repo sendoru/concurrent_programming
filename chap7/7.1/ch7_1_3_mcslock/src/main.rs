@@ -12,7 +12,7 @@ fn main() {
     for _ in 0..NUM_THREADS {
         let n0 = n.clone();
         let t = std::thread::spawn(move || {
-            // ノードを作成してロック
+            // 노드를 작성하고 록
             let mut node = mcs::MCSNode::new();
             for _ in 0..NUM_LOOP {
                 let mut r = n0.lock(&mut node);
@@ -27,7 +27,7 @@ fn main() {
         t.join().unwrap();
     }
 
-    // ノードを作成してロック
+    // 노드를 작성하고 록
     let mut node = mcs::MCSNode::new();
     let r = n.lock(&mut node);
     println!(

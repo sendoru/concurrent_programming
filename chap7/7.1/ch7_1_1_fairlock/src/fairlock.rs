@@ -2,28 +2,28 @@ use std::cell::UnsafeCell;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{fence, AtomicBool, AtomicUsize, Ordering};
 
-// スレッドの最大数
-pub const NUM_LOCK: usize = 8; // <1>
+// 스레드의 최대 수
+pub const NUM_LOCK: usize = 8; // ❶
 
-// NUM_LOCKの剰余を求めるためのビットマスク
-const MASK: usize = NUM_LOCK - 1; // <2>
+// NUM_LOCK의 여분을 구하기 위한 비트 마스크
+const MASK: usize = NUM_LOCK - 1; // ❷
 
-// 公平なロック用の型 <3>
+// 공평한 록용 타입 ❸
 pub struct FairLock<T> {
-    waiting: Vec<AtomicBool>, // ロック獲得試行中のスレッド
-    lock: AtomicBool,         // ロック用変数
-    turn: AtomicUsize,        // ロック獲得優先するスレッド
-    data: UnsafeCell<T>,      // 保護対象データ
+    waiting: Vec<AtomicBool>, // 록 획등 중인 스레드
+    lock: AtomicBool,         // 록용 변수
+    turn: AtomicUsize,        // 록 획득 우선 스레드
+    data: UnsafeCell<T>,      // 보호 대상 데이터
 }
 
-// ロックの解放と、保護対象データへのアクセスを行うための型 <4>
+// 록 해제, 보호 대상 데이터로의 접근을 수행하기 위한 타입 ❹
 pub struct FairLockGuard<'a, T> {
     fair_lock: &'a FairLock<T>,
-    idx: usize, // スレッド番号
+    idx: usize, // 스레드 번호
 }
 
 impl<T> FairLock<T> {
-    pub fn new(v: T) -> Self { // <1>
+    pub fn new(v: T) -> Self { // ❶
         let mut vec = Vec::new();
         for _ in 0..NUM_LOCK {
             vec.push(AtomicBool::new(false));
@@ -37,28 +37,28 @@ impl<T> FairLock<T> {
         }
     }
 
-    // ロック関数 <2>
-    // idxはスレッドの番号
+    // 록 함수 ❷
+    // idx는 스레드 번호
     pub fn lock(&self, idx: usize) -> FairLockGuard<T> {
-        assert!(idx < NUM_LOCK); // idxが最大数未満であるか検査 <3>
+        assert!(idx < NUM_LOCK); // idx가 최대 수 미만인지 검사 ❸
 
-        // 自身のスレッドをロック獲得試行中に設定
-        self.waiting[idx].store(true, Ordering::Relaxed); // <4>
+        // 자신의 스레드를 록 획득 시행 중으로 설정 
+        self.waiting[idx].store(true, Ordering::Relaxed); // ❹
         loop {
-            // 他のスレッドがfalseを設定した場合にロック獲得 <5>
+            // 다른 스레드가 false를 설정한 경우 록 획득❺
             if !self.waiting[idx].load(Ordering::Relaxed) {
                 break;
             }
 
-            // 共有変数を用いてロック獲得を試みる <6>
+            // 공유 변수를 이용해 록 획득을 테스트❻
             if !self.lock.load(Ordering::Relaxed) {
                 if let Ok(_) = self.lock.compare_exchange_weak(
-                    false, // falseなら
-                    true,  // trueを書き込み
-                    Ordering::Relaxed, // 成功時のオーダー
-                    Ordering::Relaxed, // 失敗時のオーダー
+                    false, // false이면
+                    true,  // true를 써넣음
+                    Ordering::Relaxed, // 성공 시 오더
+                    Ordering::Relaxed, // 실패 시 오더
                 ) {
-                    break; // ロック獲得
+                    break; // 록 획득
                 }
             }
         }
@@ -71,15 +71,15 @@ impl<T> FairLock<T> {
     }
 }
 
-// ロック獲得後に自動で解放されるようにDropトレイトを実装 <1>
+// 록 획득 후에 자동으로 해제되도록 Drop 트레이트를 구현 ❶
 impl<'a, T> Drop for FairLockGuard<'a, T> {
     fn drop(&mut self) {
-        let fl = self.fair_lock; // fair_lockへの参照を取得
+        let fl = self.fair_lock; // fair_lock으로의 참조를 획득
 
-        // 自身のスレッドを非ロック獲得試行中に設定 <2>
+        // 자신의 스레드를 록 획득 시도 중이 아닌 상태로 설정❷
         fl.waiting[self.idx].store(false, Ordering::Relaxed);
 
-        // 現在のロック獲得優先スレッドが自分なら次のスレッドに設定 <3>
+        // 현재의 록 획득 우선 스레드가 자신이라면 다음 스레드로 설정 ❸
         let turn = fl.turn.load(Ordering::Relaxed);
         let next = if turn == self.idx {
             (turn + 1) & MASK
@@ -87,25 +87,25 @@ impl<'a, T> Drop for FairLockGuard<'a, T> {
             turn
         };
 
-        if fl.waiting[next].load(Ordering::Relaxed) { // <4>
-            // 次のロック獲得優先スレッドがロック獲得中の場合
-            // そのスレッドにロックを渡す
+        if fl.waiting[next].load(Ordering::Relaxed) { // ❹
+            // 다음 록 획득 우선 스레드가 록 획득 중이면
+            // 해당 스레드에 록을 전달한다
             fl.turn.store(next, Ordering::Relaxed);
             fl.waiting[next].store(false, Ordering::Release);
         } else {
-            // 次のロック獲得優先スレッドがロック獲得中でない場合
-            // 次の次のスレッドをロック獲得優先スレッドに設定してロック解放
+            // 다음 록 획득 우선 스레드가 록 획득 중이 아니면
+            // 그 다음 스레드를 록 획득 우선 스레드로 설정하고 록을 해제한다
             fl.turn.store((next + 1) & MASK, Ordering::Relaxed);
             fl.lock.store(false, Ordering::Release);
         }
     }
 }
 
-// FairLock型はスレッド間で共有可能と設定
+// FairLock 타입은 스레드 사이에서 공유 가능하도록 설정
 unsafe impl<T> Sync for FairLock<T> {}
 unsafe impl<T> Send for FairLock<T> {}
 
-// 保護対象データのimmutableな参照外し
+// 보호 대상 데이터의 이뮤터블한 참조 제외
 impl<'a, T> Deref for FairLockGuard<'a, T> {
     type Target = T;
 
@@ -114,7 +114,7 @@ impl<'a, T> Deref for FairLockGuard<'a, T> {
     }
 }
 
-// 保護対象データのmutableな参照外し
+// 보호 대상 데이터의 뮤터블한 참조 제외
 impl<'a, T> DerefMut for FairLockGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.fair_lock.data.get() }

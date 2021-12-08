@@ -7,28 +7,28 @@
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 sigset_t set;
 
-void *handler(void *arg) { // <1>
-    pthread_detach(pthread_self()); // デタッチ <2>
+void *handler(void *arg) { // ❶
+    pthread_detach(pthread_self()); // 디태치 ❷
 
     int sig;
     for (;;) {
-        if (sigwait(&set, &sig) != 0) { // <3>
+        if (sigwait(&set, &sig) != 0) { // ❸
             perror("sigwait");
             exit(1);
         }
         printf("received signal: %d\n", sig);
         pthread_mutex_lock(&mutex);
-        // 何らかの処理
+        // 무언가의 처리
         pthread_mutex_unlock(&mutex);
     }
 
     return NULL;
 }
 
-void *worker(void *arg) { // <4>
+void *worker(void *arg) { // ❹
     for (int i = 0; i < 10; i++) {
         pthread_mutex_lock(&mutex);
-        // 何らかの処理
+        // 무언가의 처리
         sleep(1);
         pthread_mutex_unlock(&mutex);
         sleep(1);
@@ -37,12 +37,12 @@ void *worker(void *arg) { // <4>
 }
 
 int main(int argc, char *argv[]) {
-    // プロセスIDを表示
+    // 프로세스 ID를 표시
     pid_t pid = getpid();
     printf("pid: %d\n", pid);
 
-    // SIGUSR1シグナルをブロックに設定
-    // この設定は、後に作成されるスレッドにも引き継がれる <5>
+    // SIGUSR1 시그널을 블록으로 설정
+    // 이 설정은 뒤에서 작성될 스레드에서도 이어진다 ❺
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
     if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {

@@ -8,18 +8,18 @@
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-// シグナルハンドラ <1>
+// 시그널 핸들러 ❶
 void handler(int sig) { printf("received signal: %d\n", sig); }
 
 int main(int argc, char *argv[]) {
-    // プロセスIDを表示 <2>
+    // 프로세스 ID를 표시 ❷
     pid_t pid = getpid();
     printf("pid: %d\n", pid);
 
-    // シグナルハンドラ登録
-    signal(SIGUSR1, handler); // <3>
+    // 시그널 핸들러 등록
+    signal(SIGUSR1, handler); // ❸
 
-    // waitしているが、誰もnotifyしないので止まったままのはず <4>
+    // wait하고 있지만, 누구도 notify를 하지 않으므로 멈춰있어야 함 ❹
     pthread_mutex_lock(&mutex);
     if (pthread_cond_wait(&cond, &mutex) != 0) {
         perror("pthread_cond_wait");

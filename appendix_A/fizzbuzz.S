@@ -1,25 +1,25 @@
     .text
-    .global _start // <1>
+    .global _start // ❶
 
-    .align 4 // <2>
-_start: // <3>
-    mov    x19, #1 // <4>
+    .align 4 // ❷
+_start: // ❸
+    mov    x19, #1 // ❹
 .Lloop:
     cmp    x19, #100
     b.hi   .Lend0
     mov    x0, x19
-    bl     FizzBuzz // <5>
+    bl     FizzBuzz // ❺
     add    x19, x19, 1
     b      .Lloop
 .Lend0:
-    mov    x0, xzr // <6>
+    mov    x0, xzr // ❻
     mov    x8, #93 // exit
     svc    #0
 
-FizzBuzz: // <7>
+FizzBuzz: // ❼
     stp    x19, x20, [sp, #-16]!
 
-    // if x0 % 15 == 0 then go to .LFB <8>
+    // if x0 % 15 == 0 then go to .LFB ❽
     mov    x20, #15
     udiv   x19, x0, x20
     msub   x19, x19, x20, x0
@@ -39,7 +39,7 @@ FizzBuzz: // <7>
     msub   x19, x19, x20, x0
     cmp    x19, xzr // x0 % 5 == 0
     b.ne   .Lend1
-    adr    x1, buzzStr // <9>
+    adr    x1, buzzStr // ❾
     mov    x2, #5   // legth of "Buzz\n"
     b      .LWrite
 .LF:
@@ -54,10 +54,10 @@ FizzBuzz: // <7>
     mov    x8, #64  // write
     svc    #0
 .Lend1:
-    ldp    x19, x20, [sp], #-16 // <10>
+    ldp    x19, x20, [sp], #-16 // ❿
     ret
 
-.data // <11>
+.data // ⓫
 fizzBuzzStr:
     .string "FizzBuzz\n"
 

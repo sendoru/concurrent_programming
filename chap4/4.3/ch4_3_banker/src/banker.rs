@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 struct Resource<const NRES: usize, const NTH: usize> {
-    available: [usize; NRES],         // 利用可能なリソース
-    allocation: [[usize; NRES]; NTH], // スレッドiが確保中のリソース
-    max: [[usize; NRES]; NTH],        // スレッドiが必要とするリソースの最大値
+    available: [usize; NRES],         // 이용 가능한 리소스
+    allocation: [[usize; NRES]; NTH], // 스레드 i가 확보 중인 리소스
+    max: [[usize; NRES]; NTH],        // 스레드 i가 필요로 하는 리소스의 최댓값
 }
 
 impl<const NRES: usize, const NTH: usize> Resource<NRES, NTH> {
@@ -15,15 +15,15 @@ impl<const NRES: usize, const NTH: usize> Resource<NRES, NTH> {
         }
     }
 
-    // 現在の状態がデッドロックに陥らないかを検査
+    // 현재 상태가 데드록을 발생시키지 않는가 확인
     fn is_safe(&self) -> bool {
-        let mut finish = [false; NTH]; // スレッドiはリソース取得と解放に成功？
-        let mut work = self.available.clone(); // 利用可能なリソースのシミュレート値
+        let mut finish = [false; NTH]; // 스레드 i는 리소스 획득과 반환에 성공했는가?
+        let mut work = self.available.clone(); // 이용 가능한 리소스의 시뮬레이션값
 
         loop {
-            // すべてのスレッドiとリソースjにおいて、
+            // 모든 스레드 i와 리소스 j에 대해,
             // finish[i] == false && work[j] >= (self.max[i][j] - self.allocation[i][j])
-            // を満たすようなスレッドを見つける。
+            // 을 만족하는 스레드를 찾는다.
             let mut found = false;
             let mut num_true = 0;
             for (i, alc) in self.allocation.iter().enumerate() {
@@ -32,28 +32,28 @@ impl<const NRES: usize, const NTH: usize> Resource<NRES, NTH> {
                     continue;
                 }
 
-                // need[j] = self.max[i][j] - self.allocation[i][j] を計算し、
-                // すべてのリソースjにおいて、work[j] >= need[j] かを判定
+                // need[j] = self.max[i][j] - self.allocation[i][j] 를 계산하고, 
+                // 모든 리소스 j에 대해, work[j] >= need[j] 인가를 판정한다.
                 let need = self.max[i].iter().zip(alc).map(|(m, a)| m - a);
                 let is_avail = work.iter().zip(need).all(|(w, n)| *w >= n);
                 if is_avail {
-                    // スレッドiがリソース確保可能
+                    // 스레드 i가 리소스 확보 가능
                     found = true;
                     finish[i] = true;
                     for (w, a) in work.iter_mut().zip(alc) {
-                        *w += *a // スレッドiの現在確保しているリソースを返却
+                        *w += *a // 스레드 i가 현재 확보하고 있는 리소스를 반환
                     }
                     break;
                 }
             }
 
             if num_true == NTH {
-                // すべてのスレッドがリソース確保可能なら安全
+                // 모든 스레드가 리소스 확보 가능하면 안전함
                 return true;
             }
 
             if !found {
-                // スレッドがリソースを確保できずに
+                // 스레드가 리소스를 확보할 수 없음
                 break;
             }
         }
@@ -61,30 +61,30 @@ impl<const NRES: usize, const NTH: usize> Resource<NRES, NTH> {
         false
     }
 
-    // id番目のスレッドが、resourceを1つ取得
+    // id번 째의 스레드가 resource를 하나 얻음
     fn take(&mut self, id: usize, resource: usize) -> bool {
-        // スレッド番号、リソース番号を検査
+        // 스레드 번호, 리소스 번호 검사
         if id >= NTH || resource >= NRES || self.available[resource] == 0 {
             return false;
         }
 
-        // リソースを確保試みる
+        // 리소스 확보를 시험해 본다
         self.allocation[id][resource] += 1;
         self.available[resource] -= 1;
 
         if self.is_safe() {
-            true // リソース確保成功
+            true // 리소스 확보 성공
         } else {
-            // リソース確保に失敗したため、状態を復元
+            // 리소스 확보에 실패했으므로 상태 원복
             self.allocation[id][resource] -= 1;
             self.available[resource] += 1;
             false
         }
     }
 
-    // id番目のスレッドが、resourceを1つ解放
+    // id번 째의 스레드가 resource를 하나 반환
     fn release(&mut self, id: usize, resource: usize) {
-        // スレッド番号、リソース番号を検査
+        // 스레드 번호, 리소스 번호를 검사
         if id >= NTH || resource >= NRES || self.allocation[id][resource] == 0 {
             return;
         }

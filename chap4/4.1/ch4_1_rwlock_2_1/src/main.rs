@@ -5,8 +5,8 @@ fn main() {
     let val = Arc::new(RwLock::new(true));
 
     let t = thread::spawn(move || {
-        let _flag = val.read().unwrap(); // <1>
-        *val.write().unwrap() = false; // <2>
+        let _flag = val.read().unwrap(); // ❶
+        *val.write().unwrap() = false; // ❷
         println!("deadlock");
     });
 

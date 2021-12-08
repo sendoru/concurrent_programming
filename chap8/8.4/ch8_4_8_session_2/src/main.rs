@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate session_types;
-use session_types as S; // <1>
+use session_types as S; // ❶
 use std::thread;
 use std::collections::HashMap;
 
@@ -16,8 +16,8 @@ fn db_server_macro(c: S::Chan<(), DBServer>) {
 
     loop {
         let c = c_enter;
-        offer! {c, // <1>
-            Put => { // <2>
+        offer! {c, // ❶
+            Put => { // ❷
                 let (c, key) = c.recv();
                 let (c, val) = c.recv();
                 db.insert(key, val);
@@ -41,29 +41,29 @@ fn db_server_macro(c: S::Chan<(), DBServer>) {
 }
 
 fn db_server(c: S::Chan<(), DBServer>) {
-    let mut c_enter = c.enter(); // <1>
-    let mut db = HashMap::new(); // DBデータ
+    let mut c_enter = c.enter(); // ❶
+    let mut db = HashMap::new(); // DB 데이터
 
     loop {
-        match c_enter.offer() { // Putが選択された <2>
+        match c_enter.offer() { // Put이 선택됨 ❷
             S::Branch::Left(c) => {
                 let (c, key) = c.recv();
                 let (c, val) = c.recv();
-                db.insert(key, val); // DBへデータ挿入
-                c_enter = c.zero();  // Recへジャンプ <3>
+                db.insert(key, val); // DB에 데이터 삽입
+                c_enter = c.zero();  // Rec로 점프 ❸
             }
-            S::Branch::Right(c) => match c.offer() { // Get or 終了 <4>
-                S::Branch::Left(c) => { // Getが選択された <5>
+            S::Branch::Right(c) => match c.offer() { // Get or 종료 ❹
+                S::Branch::Left(c) => { // Get이 선택됨 ❺
                     let (c, key) = c.recv();
                     let c = if let Some(val) = db.get(&key) {
                         c.send(Some(*val))
                     } else {
                         c.send(None)
                     };
-                    c_enter = c.zero(); // Recへジャンプ <6>
+                    c_enter = c.zero(); // Rec으로 점프 ❻
                 }
-                S::Branch::Right(c) => { // 終了が選択 <7>
-                    c.close(); // セッションクローズ <8>
+                S::Branch::Right(c) => { // 종료가 선택됨 ❼
+                    c.close(); // 세션 클로즈 ❽
                     return;
                 }
             },
@@ -72,8 +72,8 @@ fn db_server(c: S::Chan<(), DBServer>) {
 }
 
 fn db_client(c: S::Chan<(), DBClient>) {
-    let c = c.enter(); // Recの中へ処理を移行
-    // Putを2回実施
+    let c = c.enter(); // Rec 안으로 처리를 이행
+    // Put을 2회 실시
     let c = c.sel1().send(10).send(4).zero();
     let c = c.sel1().send(50).send(7).zero();
 
@@ -81,32 +81,32 @@ fn db_client(c: S::Chan<(), DBClient>) {
     let (c, val) = c.sel2().sel1().send(10).recv();
     println!("val = {:?}", val); // Some(4)
 
-    let c = c.zero(); // Recへジャンプ
+    let c = c.zero(); // Rec으로 점프
 
     // Get
     let (c, val) = c.sel2().sel1().send(20).recv();
     println!("val = {:?}", val); // None
 
-    // 終了
+    // 종료
     let _ = c.zero().sel2().sel2().close();
 }
 
-type SChan = S::Chan<(), S::Send<(), S::Eps>>; // <1>
-type ChanRecv = S::Recv<SChan, S::Eps>; // <2>
+type SChan = S::Chan<(), S::Send<(), S::Eps>>; // ❶
+type ChanRecv = S::Recv<SChan, S::Eps>; // ❷
 type ChanSend = <ChanRecv as S::HasDual>::Dual;
 
 fn chan_recv(c: S::Chan<(), ChanRecv>) {
-    let (c, cr) = c.recv(); // チャネルの端点を受信 <3>
+    let (c, cr) = c.recv(); // 채널 엔드포인트를 수신 ❸
     c.close();
-    let cr = cr.send(()); // 受信した端点に対して送信 <4>
+    let cr = cr.send(()); // 수신한 엔드포인트에 대해 송신 ❹
     cr.close();
 }
 
 fn chan_send(c: S::Chan<(), ChanSend>) {
-    let (c1, c2) = S::session_channel(); // チャネルの生成
-    let c = c.send(c1); // チャネルの端点を送信 <5>
+    let (c1, c2) = S::session_channel(); // 채널 생성
+    let c = c.send(c1); // 채널 엔드포인트를 송신❺
     c.close();
-    let (c2, _) = c2.recv(); // 送信した端点の反対側より受信 <6>
+    let (c2, _) = c2.recv(); // 송신한 엔드포인트(端点)의 반대측에서 수신 ❻
     c2.close();
 }
 
@@ -119,7 +119,7 @@ fn main() {
 
     println!("--------------------");
 
-    // マクロの利用例
+    // 먀크로 이용 예시
     let (server_chan, client_chan) = S::session_channel();
     let srv_t = thread::spawn(move || db_server_macro(server_chan));
     let cli_t = thread::spawn(move || db_client(client_chan));
@@ -128,7 +128,7 @@ fn main() {
 
     println!("--------------------");
 
-    // チャネル送受信の利用例
+    // 채널 송수신 이용 예시
     let (server_chan, client_chan) = S::session_channel();
     let srv_t = thread::spawn(move || chan_recv(server_chan));
     let cli_t = thread::spawn(move || chan_send(client_chan));

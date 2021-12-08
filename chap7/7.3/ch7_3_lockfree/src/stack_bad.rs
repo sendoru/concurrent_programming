@@ -1,13 +1,13 @@
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-// スタックのノード。リスト構造で管理 <1>
+// 스택의 노드. 리스트 구조로 관리 ❶
 struct Node<T> {
     next: AtomicPtr<Node<T>>,
     data: T,
 }
 
-// スタックの先頭
+// 스택의 선두
 pub struct StackBad<T> {
     head: AtomicPtr<Node<T>>,
 }
@@ -19,33 +19,33 @@ impl<T> StackBad<T> {
         }
     }
 
-    pub fn push(&self, v: T) { // <2>
-        // 追加するノードを作成
+    pub fn push(&self, v: T) { // ❷
+        // 추가할 노드를 작성
         let node = Box::new(Node {
             next: AtomicPtr::new(null_mut()),
             data: v,
         });
 
-        // Box型の値からポインタを取り出す
+        // Box 타입의 값으로부터 포인터를 꺼낸다
         let ptr = Box::into_raw(node);
 
         unsafe {
-            // アトミックにヘッドを更新 <3>
+            // 아토믹하게 헤드를 업데이트 ❸
             loop {
-                // headの値を取得
+                // head의 값을 취득
                 let head = self.head.load(Ordering::Relaxed);
 
-                // 追加するノードのnextをheadに設定
+                // 추가할 노드의 next를 haed로 설정
                 (*ptr).next.store(head, Ordering::Relaxed);
 
-                // headの値が更新されていなければ、追加するノードに更新
+                // head의 값이 업데이트되지 않으면, 추가할 노드에 업데이트
                 if let Ok(_) =
                     self.head
                         .compare_exchange_weak(
-                            head, // 値がheadなら
-                            ptr,  // ptrに更新
-                            Ordering::Release, // 成功時のオーダー
-                            Ordering::Relaxed  // 失敗時のオーダー
+                            head, // 값이 head이면
+                            ptr,  // ptr로 업데이트
+                            Ordering::Release, // 성공 시 오더
+                            Ordering::Relaxed  // 실패 시 오더
                 ) {
                     break;
                 }
@@ -53,28 +53,28 @@ impl<T> StackBad<T> {
         }
     }
 
-    pub fn pop(&self) -> Option<T> { // <4>
+    pub fn pop(&self) -> Option<T> { // ❹
         unsafe {
-            // アトミックにヘッドを更新
+            // 아토믹하게 헤드를 업데이트
             loop {
-                // headの値を取得 <5>
+                // head의 값을 취득 ❺
                 let head = self.head.load(Ordering::Relaxed);
                 if head == null_mut() {
-                    return None; // headがヌルの場合にNone
+                    return None; // head가 null이면 None
                 }
 
-                // head.nextを取得 <6>
+                // head.next를 취득 ❻
                 let next = (*head).next.load(Ordering::Relaxed);
 
-                // headの値が更新されていなければ、
-                // head.nextを新たなheadに更新 <7>
+                // head의 값이 업데이트되어 있지 않으면,
+                // head.next를 새로운 header로 업데이트 ❼
                 if let Ok(_) = self.head.compare_exchange_weak(
-                    head, // 値がheadなら
-                    next, // nextに更新
-                    Ordering::Acquire, // 成功時のオーダー
-                    Ordering::Relaxed, // 失敗時のオーダー
+                    head, // 값이 head이면
+                    next, // next오 업데이트
+                    Ordering::Acquire, // 성공 시 오더
+                    Ordering::Relaxed, // 실패 시 오더
                 ) {
-                    // ポインタをBoxに戻して、中の値をリターン
+                    // 포인터를 Box로 되돌리고, 안의 값을 리턴 
                     let h = Box::from_raw(head);
                     return Some((*h).data);
                 }
@@ -85,10 +85,10 @@ impl<T> StackBad<T> {
 
 impl<T> Drop for StackBad<T> {
     fn drop(&mut self) {
-        // データ削除
+        // 데이터 삭제
         let mut node = self.head.load(Ordering::Relaxed);
         while node != null_mut() {
-            // ポインタをBoxに戻す操作を繰り返す
+            // 포인터를 Box로 되돌리는 조작을 반복함
             let n = unsafe { Box::from_raw(node) };
             node = n.next.load(Ordering::Relaxed)
         }

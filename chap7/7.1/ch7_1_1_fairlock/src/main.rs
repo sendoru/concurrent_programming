@@ -13,7 +13,7 @@ fn main() {
         let lock0 = lock.clone();
         let t = std::thread::spawn(move || {
             for _ in 0..NUM_LOOP {
-                // スレッド番号を渡してロック
+                // 스레즈 번호를 전달해서 록
                 let mut data = lock0.lock(i);
                 *data += 1;
             }

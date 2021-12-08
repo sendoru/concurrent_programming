@@ -6,34 +6,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// 再入可能ミューテックス用の型 <1>
+// 재진입 가능한 뮤텍스용 타입 ❶
 struct reent_lock {
-    bool lock; // ロック用共有変数
-    int id;    // 現在ロックを獲得中のスレッドID、非ゼロの場合ロック獲得中
-    int cnt;   // 再帰ロックのカウント
+    bool lock; // 록용 공유 변수
+    int id;    // 현재 록을 획득 중인 스레드 ID, 0이 아니면 록 획득중임
+    int cnt;   // 재귀 록 카운트
 };
 
-// 再帰ロック獲得関数
+// 재귀 록 획득 함수
 void reentlock_acquire(struct reent_lock *lock, int id) {
-    // ロック獲得中でかつ自分が獲得中か判定 <2>
+    // 록 획득 중이고 자신이 획득 중인지 판정 ❷
     if (lock->lock && lock->id == id) {
-        // 自分が獲得中ならカウントをインクリメント
+        // 자신이 획등 중이면 카운트를 인크리먼트
         lock->cnt++;
     } else {
-        // 誰もロックを獲得していないか、
-        // 他のスレッドがロック獲得中ならロック獲得
+        // 어떤 스레드도 혹을 획득하지 않았거나,
+        // 다른 스레드가 록 획득 중이면 록 획득
         spinlock_acquire(&lock->lock);
-        // ロックを獲得したら、自身のスレッドIDを設定し、
-        // カウントをインクリメント
+        // 록윽 획득하면 자신의 스레드 ID를 설정하고
+        // 마운트를 인크리먼트
         lock->id = id;
         lock->cnt++;
     }
 }
 
-// 再帰ロック解放関数
+// 재귀 록 해제 함수
 void reentlock_release(struct reent_lock *lock) {
-    // カウントをデクリメントし、
-    // そのカウントが0になったらロック解放 <3>
+    // 카운트를 디크리먼트하고,
+    // 해당 카운트가 0이 되면 록 해제 ❸
     lock->cnt--;
     if (lock->cnt == 0) {
         lock->id = 0;
@@ -41,20 +41,20 @@ void reentlock_release(struct reent_lock *lock) {
     }
 }
 
-struct reent_lock lock_var; // ロック用の共有変数
+struct reent_lock lock_var; // 록용 공유 변수
 
-// n回再帰的に呼び出してロックするテスト関数
+// n회 재귀적으로 호출해 록을 거는 테스트 함수
 void reent_lock_test(int id, int n) {
     if (n == 0)
         return;
 
-    // 再帰ロック
+    // 재귀 록
     reentlock_acquire(&lock_var, id);
     reent_lock_test(id, n - 1);
     reentlock_release(&lock_var);
 }
 
-// スレッド用関数
+// 스레드용 함수
 void *thread_func(void *arg) {
     int id = (int)arg;
     assert(id != 0);
