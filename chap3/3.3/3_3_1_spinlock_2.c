@@ -1,8 +1,8 @@
 #include "../3.2/3_2_2_tas.c"
 
-void spinlock_acquire(volatile bool *lock) { // <1>
+void spinlock_acquire(volatile bool *lock) { // ❶
     for (;;) {
-        while(*lock); // <2>
+        while(*lock); // ❷
         if (!test_and_set(lock))
             break;
     }

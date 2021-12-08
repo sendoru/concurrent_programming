@@ -1,37 +1,37 @@
-use std::sync::{Arc, Mutex, Condvar}; // <1>
+use std::sync::{Arc, Mutex, Condvar}; // ❶
 use std::thread;
 
-// Condvar型の変数が条件変数であり、
-// MutexとCondvarを含むタプルがArcに包んで渡される
-fn child(id: u64, p: Arc<(Mutex<bool>, Condvar)>) { // <2>
+// Condvar 타입의 변수가 조건 변수이며
+// Mutex와 Condvar를 포함하는 튜플이 Arc에 포함되어 전달된다
+fn child(id: u64, p: Arc<(Mutex<bool>, Condvar)>) { // ❷
     let &(ref lock, ref cvar) = &*p;
 
-    // まず、ミューテックスロックを行う
-    let mut started = lock.lock().unwrap(); // <3>
-    while !*started { // Mutex中の共有変数がfalseの間ループ
-        // waitで待機
-        started = cvar.wait(started).unwrap(); // <4>
+    // 먼저, 뮤텍스 록을 수행한다
+    let mut started = lock.lock().unwrap(); // ❸
+    while !*started { // Mutex 안의 공유 변수가 false인 동안 루프 
+        // wait로 대기
+        started = cvar.wait(started).unwrap(); // ❹
 
     }
 
-    // 以下のようにwait_whileを使うことも可能
+    // 다음과 같이 wait_while을 사용할 수도 있음
     // cvar.wait_while(started, |started| !*started).unwrap();
 
     println!("child {}", id);
 }
 
-fn parent(p: Arc<(Mutex<bool>, Condvar)>) { // <5>
+fn parent(p: Arc<(Mutex<bool>, Condvar)>) { // ❺
     let &(ref lock, ref cvar) = &*p;
 
-    // まず、ミューテックスロックを行う <6>
+    // 먼저 뮤텍스 록을 수행한다 ❻
     let mut started = lock.lock().unwrap();
-    *started = true;   // 共有変数を更新
-    cvar.notify_all(); // 通知
+    *started = true;   // 공유 변수 업데이트
+    cvar.notify_all(); // 알림
     println!("parent");
 }
 
 fn main() {
-    // ミューテックスと条件変数を作成
+    // 뮤텍스와 조건 변수를 작성
     let pair0 = Arc::new((Mutex::new(false), Condvar::new()));
     let pair1 = pair0.clone();
     let pair2 = pair0.clone();

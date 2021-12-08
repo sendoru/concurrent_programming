@@ -5,9 +5,9 @@ fn main() {
     let val = Arc::new(RwLock::new(true));
 
     let t = thread::spawn(move || {
-        let flag = *val.read().unwrap(); // <1>
+        let flag = *val.read().unwrap(); // ❶
         if flag {
-            *val.write().unwrap() = false; // <2>
+            *val.write().unwrap() = false; // ❷
             println!("flag is true");
         }
     });

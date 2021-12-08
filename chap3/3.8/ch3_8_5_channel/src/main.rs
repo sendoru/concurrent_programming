@@ -10,7 +10,7 @@ fn main() {
     let (tx, rx) = channel(4);
     let mut v = Vec::new();
 
-    // 受信用スレッド
+    // 수신용 스레드
     let t = std::thread::spawn(move || {
         let mut cnt = 0;
         while cnt < NUM_THREADS * NUM_LOOP {
@@ -22,7 +22,7 @@ fn main() {
 
     v.push(t);
 
-    // 送信用スレッド
+    // 송신용 스레드
     for i in 0..NUM_THREADS {
         let tx0 = tx.clone();
         let t = std::thread::spawn(move || {

@@ -9,7 +9,7 @@ use nix::{
             epoll_create1, epoll_ctl, epoll_wait,
             EpollCreateFlags, EpollEvent, EpollFlags, EpollOp,
         },
-        eventfd::{eventfd, EfdFlags}, // eventfd用のインポート <1>
+        eventfd::{eventfd, EfdFlags}, // eventfd용 임포트 ❶
     },
     unistd::write,
 };
@@ -28,70 +28,70 @@ use std::{
 };
 
 fn write_eventfd(fd: RawFd, n: usize) {
-    // usizeを*const u8に変換
+    // usize를 *const u8로 변환
     let ptr = &n as *const usize as *const u8;
     let val = unsafe {
         std::slice::from_raw_parts(
             ptr, std::mem::size_of_val(&n))
     };
-    // writeシステムコール呼び出し
+    // write 시스템콜 호출
     write(fd, &val).unwrap();
 }
 
 enum IOOps {
-    ADD(EpollFlags, RawFd, Waker), // epollへ追加
-    REMOVE(RawFd),                 // epollから削除
+    ADD(EpollFlags, RawFd, Waker), // epoll에 추가
+    REMOVE(RawFd),                 // epoll에서 삭제
 }
 
 struct IOSelector {
-    wakers: Mutex<HashMap<RawFd, Waker>>, // fdからwaker
-    queue: Mutex<VecDeque<IOOps>>,        // IOのキュー
-    epfd: RawFd,  // epollのfd
-    event: RawFd, // eventfdのfd
+    wakers: Mutex<HashMap<RawFd, Waker>>, // fd에서 waker
+    queue: Mutex<VecDeque<IOOps>>,        // IO 큐
+    epfd: RawFd,  // epoll의 fd
+    event: RawFd, // eventfd의 fd
 }
 
 impl IOSelector {
-    fn new() -> Arc<Self> { // <1>
+    fn new() -> Arc<Self> { // ❶
         let s = IOSelector {
             wakers: Mutex::new(HashMap::new()),
             queue: Mutex::new(VecDeque::new()),
             epfd: epoll_create1(EpollCreateFlags::empty()).unwrap(),
-            // eventfd生成
-            event: eventfd(0, EfdFlags::empty()).unwrap(), // <2>
+            // eventfd 생성
+            event: eventfd(0, EfdFlags::empty()).unwrap(), // ❷
         };
         let result = Arc::new(s);
         let s = result.clone();
 
-        // epoll用のスレッド生成 <3>
+        // epoll용 스레드 생성 ❸
         std::thread::spawn(move || s.select());
 
         result
     }
 
-    // epollで監視するための関数 <4>
+    // epoll로 감시하기 위한 함수 ❹
     fn add_event(
         &self,
-        flag: EpollFlags, // epollのフラグ
-        fd: RawFd,        // 監視対象のファイルディスクリプタ
+        flag: EpollFlags, // epoll 플래그
+        fd: RawFd,        // 감시 대상 파일 디스크립터
         waker: Waker,
         wakers: &mut HashMap<RawFd, Waker>,
     ) {
-        // 各定義のショートカット
+        // 각 정의의 숏컷
         let epoll_add = EpollOp::EpollCtlAdd;
         let epoll_mod = EpollOp::EpollCtlMod;
         let epoll_one = EpollFlags::EPOLLONESHOT;
 
-        // EPOLLONESHOTを指定して、一度イベントが発生すると
-        // そのfdへのイベントは再設定するまで通知されないようになる <5>
+        // EPOLLONESHOT을 지정해, 일단 이벤트가 발생하면
+        // 그 fd로의 이벤트는 재설정할 떄까지 알림이 발생하지 않게 된다 ❺
         let mut ev =
             EpollEvent::new(flag | epoll_one, fd as u64);
 
-        // 監視対象に追加
+        // 감시 대상에 추가
         if let Err(err) = epoll_ctl(self.epfd, epoll_add, fd,
                                     &mut ev) {
             match err {
                 nix::Error::Sys(Errno::EEXIST) => {
-                    // すでに追加されていた場合は再設定 <6>
+                    // 이미 추가되어있는 경우에는 재설정❻
                     epoll_ctl(self.epfd, epoll_mod, fd,
                               &mut ev).unwrap();
                 }
@@ -102,10 +102,10 @@ impl IOSelector {
         }
 
         assert!(!wakers.contains_key(&fd));
-        wakers.insert(fd, waker); // <7>
+        wakers.insert(fd, waker); // ❼
     }
 
-    // epollの監視から削除するための関数 <8>
+    // epoll의 감시해서 삭제하기 위한 함수 ❽
     fn rm_event(&self, fd: RawFd, wakers: &mut HashMap<RawFd, Waker>) {
         let epoll_del = EpollOp::EpollCtlDel;
         let mut ev = EpollEvent::new(EpollFlags::empty(),
@@ -114,39 +114,39 @@ impl IOSelector {
         wakers.remove(&fd);
     }
 
-    fn select(&self) { // <9>
-        // 各定義のショートカット
+    fn select(&self) { // ❾
+        // 각 장의의 숏컷
         let epoll_in = EpollFlags::EPOLLIN;
         let epoll_add = EpollOp::EpollCtlAdd;
 
-        // eventfdをepollの監視対象に追加 <10>
+        // eventfd를 epoll의 감시 대상에 추가 ❿
         let mut ev = EpollEvent::new(epoll_in,
                                      self.event as u64);
         epoll_ctl(self.epfd, epoll_add, self.event,
                   &mut ev).unwrap();
 
         let mut events = vec![EpollEvent::empty(); 1024];
-        // event発生を監視
-        while let Ok(nfds) = epoll_wait(self.epfd, // <11>
+        // event 발생을 감시
+        while let Ok(nfds) = epoll_wait(self.epfd, // ⓫
                                         &mut events, -1) {
             let mut t = self.wakers.lock().unwrap();
             for n in 0..nfds {
                 if events[n].data() == self.event as u64 {
-                    // eventfdの場合、追加、削除要求を処理 <12>
+                    // eventfd의 경우, 추가 및 삭제 요구를 처리 ⓬
                     let mut q = self.queue.lock().unwrap();
                     while let Some(op) = q.pop_front() {
                         match op {
-                            // 追加
+                            // 추가
                             IOOps::ADD(flag, fd, waker) =>
                                 self.add_event(flag, fd, waker,
                                                &mut t),
-                            // 削除
+                            // 삭제
                             IOOps::REMOVE(fd) =>
                                 self.rm_event(fd, &mut t),
                         }
                     }
                 } else {
-                    // 実行キューに追加 <13>
+                    // 실향 큐에 추가 ⓭
                     let data = events[n].data() as i32;
                     let waker = t.remove(&data).unwrap();
                     waker.wake_by_ref();
@@ -155,14 +155,14 @@ impl IOSelector {
         }
     }
 
-    // ファイルディスクリプタ登録用関数 <14>
+    // 파일 디스크립터 등록용 함수 ⓮
     fn register(&self, flags: EpollFlags, fd: RawFd, waker: Waker) {
         let mut q = self.queue.lock().unwrap();
         q.push_back(IOOps::ADD(flags, fd, waker));
         write_eventfd(self.event, 1);
     }
 
-    // ファイルディスクリプタ削除用関数 <15>
+    // 파일 디스크립터 삭제용 함수 ⓯
     fn unregister(&self, fd: RawFd) {
         let mut q = self.queue.lock().unwrap();
         q.push_back(IOOps::REMOVE(fd));
@@ -170,18 +170,18 @@ impl IOSelector {
     }
 }
 
-struct AsyncListener { // <1>
+struct AsyncListener { // ❶
     listener: TcpListener,
     selector: Arc<IOSelector>,
 }
 
 impl AsyncListener {
-    // TcpListenerの初期化処理をラップした関数 <2>
+    // TcpListener의 초기화 처리를 감싼 함수 ❷
     fn listen(addr: &str, selector: Arc<IOSelector>) -> AsyncListener {
-        // リッスンアドレスを指定
+        // 리슨 주소를 지정
         let listener = TcpListener::bind(addr).unwrap();
 
-        // ノンブロッキングに指定
+        // 논블로킹으로 지정
         listener.set_nonblocking(true).unwrap();
 
         AsyncListener {
@@ -190,14 +190,14 @@ impl AsyncListener {
         }
     }
 
-    // コネクションをアクセプトするためのFutureをリターン <3>
+    // 커넥션을 억셉트하기 위한 Future를 리턴 ❸
     fn accept(&self) -> Accept {
         Accept { listener: self }
     }
 }
 
 impl Drop for AsyncListener {
-    fn drop(&mut self) { // <4>
+    fn drop(&mut self) { // ❹
         self.selector.unregister(self.listener.as_raw_fd());
     }
 }
@@ -207,18 +207,18 @@ struct Accept<'a> {
 }
 
 impl<'a> Future for Accept<'a> {
-    // 返り値の型
-    type Output = (AsyncReader,          // 非同期読み込みストリーム
-                   BufWriter<TcpStream>, // 書き込みストリーム
-                   SocketAddr);          // アドレス
+    // 반환값 타입
+    type Output = (AsyncReader,          // 비동기 읽기 스트림
+                   BufWriter<TcpStream>, // 쓰기 스트림
+                   SocketAddr);          // 주소
 
     fn poll(self: Pin<&mut Self>,
             cx: &mut Context<'_>) -> Poll<Self::Output> {
-        // アクセプトをノンブロッキングで実行
-        match self.listener.listener.accept() { // <1>
+        // 억셉트를 논블로킹으로 실행
+        match self.listener.listener.accept() { // ❶
             Ok((stream, addr)) => {
-                // アクセプトした場合は
-                // 読み込みと書き込み用オブジェクトおよびアドレスをリターン <2>
+                // 억셉트한 경우는 
+                // 읽기와 쓰기용 객체 및 주소를 리턴 ❷
                 let stream0 = stream.try_clone().unwrap();
                 Poll::Ready((
                     AsyncReader::new(stream0, self.listener.selector.clone()),
@@ -227,7 +227,7 @@ impl<'a> Future for Accept<'a> {
                 ))
             }
             Err(err) => {
-                // アクセプトすべきコネクションがない場合はepollに登録 <3>
+                // 억세스할 커넥션이 없는 경우는 epoll에 등록 ❸
                 if err.kind() == std::io::ErrorKind::WouldBlock {
                     self.listener.selector.register(
                         EpollFlags::EPOLLIN,
@@ -252,7 +252,7 @@ struct AsyncReader {
 impl AsyncReader {
     fn new(stream: TcpStream,
            selector: Arc<IOSelector>) -> AsyncReader {
-        // ノンブロッキングに設定
+        // 논블로킹으로 설정
         stream.set_nonblocking(true).unwrap();
         AsyncReader {
             fd: stream.as_raw_fd(),
@@ -261,7 +261,7 @@ impl AsyncReader {
         }
     }
 
-    // 1行読み込みのためのFutureをリターン
+    // 1행 읽기만 하므로 Future를 리턴
     fn read_line(&mut self) -> ReadLine {
         ReadLine { reader: self }
     }
@@ -278,18 +278,18 @@ struct ReadLine<'a> {
 }
 
 impl<'a> Future for ReadLine<'a> {
-    // 返り値の型
+    // 반환값의 타입
     type Output = Option<String>;
 
     fn poll(mut self: Pin<&mut Self>,
             cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut line = String::new();
-        // 非同期読み込み
-        match self.reader.reader.read_line(&mut line) { // <1>
-            Ok(0) => Poll::Ready(None),  // コネクションクローズ
-            Ok(_) => Poll::Ready(Some(line)), // 1行読み込み成功
+        // 비동기 읽기
+        match self.reader.reader.read_line(&mut line) { // ❶
+            Ok(0) => Poll::Ready(None),  // 커넥션 유실
+            Ok(_) => Poll::Ready(Some(line)), // 1행 읽기 성공
             Err(err) => {
-                // 読み込みできない場合はepollに登録 <2>
+                // 읽을 수 없는 경우는 epoll에 등록 ❷
                 if err.kind() == std::io::ErrorKind::WouldBlock {
                     self.reader.selector.register(
                         EpollFlags::EPOLLIN,
@@ -306,29 +306,29 @@ impl<'a> Future for ReadLine<'a> {
 }
 
 struct Task {
-    // 実行するコルーチン
-    future: Mutex<BoxFuture<'static, ()>>, // <1>
-    // Executorへスケジューリングするためのチャネル
-    sender: SyncSender<Arc<Task>>, // <2>
+    // 실행할 코루틴
+    future: Mutex<BoxFuture<'static, ()>>, // ❶
+    // Executor로 스케줄링 하기 위한 채널
+    sender: SyncSender<Arc<Task>>, // ❷
 }
 
 impl ArcWake for Task {
-    fn wake_by_ref(arc_self: &Arc<Self>) { // <3>
-        // 自身をスケジューリング
+    fn wake_by_ref(arc_self: &Arc<Self>) { // ❸
+        // 자신을 스케줄링
         let self0 = arc_self.clone();
         arc_self.sender.send(self0).unwrap();
     }
 }
 
-struct Executor { // <1>
-    // 実行キュー
+struct Executor { // ❶
+    // 실행 큐
     sender: SyncSender<Arc<Task>>,
     receiver: Receiver<Arc<Task>>,
 }
 
 impl Executor {
     fn new() -> Self {
-        // チャネルを生成。キューのサイズは最大1024個
+        // 채널 생성. 큐의 크기는 최대 1024개
         let (sender, receiver) = sync_channel(1024);
         Executor {
             sender: sender.clone(),
@@ -336,39 +336,39 @@ impl Executor {
         }
     }
 
-    // 新たにTaskを生成するためのSpawnerを作成 <2>
+    // 새롭게 Task를 생성하기 위한 Spawner를 작성 ❷
     fn get_spawner(&self) -> Spawner {
         Spawner {
             sender: self.sender.clone(),
         }
     }
 
-    fn run(&self) { // <3>
-        // チャネルからTaskを受信して順に実行
+    fn run(&self) { // ❸
+        // 채널에서 Task를 수신해 순서대로 실행
         while let Ok(task) = self.receiver.recv() {
-            // コンテキストを生成
+            // 컨텍스트를 생성
             let mut future = task.future.lock().unwrap();
             let waker = waker_ref(&task);
             let mut ctx = Context::from_waker(&waker);
-            // pollを呼び出し実行
+            // poll을 호출하고 실행
             let _ = future.as_mut().poll(&mut ctx);
         }
     }
 }
 
-struct Spawner { // <1>
+struct Spawner { // ❶
     sender: SyncSender<Arc<Task>>,
 }
 
 impl Spawner {
-    fn spawn(&self, future: impl Future<Output = ()> + 'static + Send) { // <2>
-        let future = future.boxed();    // FutureをBox化
-        let task = Arc::new(Task {      // Task生成
+    fn spawn(&self, future: impl Future<Output = ()> + 'static + Send) { // ❷
+        let future = future.boxed();    // Future를 Box화
+        let task = Arc::new(Task {      // Task 생성
             future: Mutex::new(future),
             sender: self.sender.clone(),
         });
 
-        // 実行キューにエンキュー
+        // 실행 큐에 인큐
         self.sender.send(task).unwrap();
     }
 }
@@ -378,19 +378,19 @@ fn main() {
     let selector = IOSelector::new();
     let spawner = executor.get_spawner();
 
-    let server = async move { // <1>
-        // 非同期アクセプト用のリスナを生成 <2>
+    let server = async move { // ❶
+        // 비동기 억셉트용 리스너 생성 ❷
         let listener = AsyncListener::listen("127.0.0.1:10000",
                                              selector.clone());
         loop {
-            // 非同期コネクションアクセプト <3>
+            // 비동기 커넥션 억셉트 ❸
             let (mut reader, mut writer, addr) =
                 listener.accept().await;
             println!("accept: {}", addr);
 
-            // コネクションごとにタスクを生成 <4>
+            // 커넥션 별로 태스크 생성 ❹
             spawner.spawn(async move {
-                // 1行非同期読み込み <5>
+                // 1헹 비동기 읽기 ❺
                 while let Some(buf) = reader.read_line().await {
                     print!("read: {}, {}", addr, buf);
                     writer.write(buf.as_bytes()).unwrap();
@@ -401,7 +401,7 @@ fn main() {
         }
     };
 
-    // タスクを生成して実行
+    // 태스크를 생성하고 실행
     executor.get_spawner().spawn(server);
     executor.run();
 }

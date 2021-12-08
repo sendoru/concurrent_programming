@@ -1,18 +1,18 @@
 use std::sync::{Arc, Mutex};
 
-const NUM_TASKS: usize = 4; // タスク数
-const NUM_LOOP: usize = 100000; // ループ数
+const NUM_TASKS: usize = 4; // 태스크 수
+const NUM_LOOP: usize = 100000; // 루프 수
 
 #[tokio::main]
 async fn main() -> Result<(), tokio::task::JoinError> {
-    let val = Arc::new(Mutex::new(0)); // 共有変数 <1>
+    let val = Arc::new(Mutex::new(0)); // 공유 변수 ❶
     let mut v = Vec::new();
     for _ in 0..NUM_TASKS {
         let n = val.clone();
-        let t = tokio::spawn(async move { // タスク生成 <2>
+        let t = tokio::spawn(async move { // 태스크 생성 ❷
             for _ in 0..NUM_LOOP {
                 let mut n0 = n.lock().unwrap();
-                *n0 += 1; // インクリメント <3>
+                *n0 += 1; // 인크리먼트 ❸
             }
         });
 

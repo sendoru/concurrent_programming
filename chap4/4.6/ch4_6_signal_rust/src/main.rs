@@ -1,19 +1,19 @@
-use signal_hook::{iterator::Signals, SIGUSR1}; // <1>
+use signal_hook::{iterator::Signals, SIGUSR1}; // ❶
 use std::{error::Error, process, thread, time::Duration};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // プロセスIDを表示
+    // 프로세스 ID를 표시
     println!("pid: {}", process::id());
 
-    let signals = Signals::new(&[SIGUSR1])?; // <2>
+    let signals = Signals::new(&[SIGUSR1])?; // ❷
     thread::spawn(move || {
-        // シグナルを受信
-        for sig in signals.forever() { // <3>
+        // 시그널 수신
+        for sig in signals.forever() { // ❸
             println!("received signal: {:?}", sig);
         }
     });
 
-    // 10秒スリープ
+    // 10초 슬립
     thread::sleep(Duration::from_secs(10));
     Ok(())
 }

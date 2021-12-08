@@ -1,13 +1,13 @@
 use std::ptr::null_mut;
 
-// スタックのノード。リスト構造で管理 <1>
+// 스택의 노드. 리스트 구조로 관리 ❶
 #[repr(C)]
 struct Node<T> {
     next: *mut Node<T>,
     data: T,
 }
 
-// スタックの先頭 <2>
+// 스택의 선두 ❷
 #[repr(C)]
 pub struct StackHead<T> {
     head: *mut Node<T>,
@@ -18,21 +18,21 @@ impl<T> StackHead<T> {
         StackHead { head: null_mut() }
     }
 
-    pub fn push(&mut self, v: T) { // <3>
-        // 追加するノードを作成
+    pub fn push(&mut self, v: T) { // ❸
+        //추가할 노드를 작성
         let node = Box::new(Node {
             next: null_mut(),
             data: v,
         });
 
-        // Box型の値からポインタを取り出す
+        // Box 타입의 값으로부터 포인터를 꺼낸다
         let ptr = Box::into_raw(node) as *mut u8 as usize;
 
-        // ポインタのポインタを取得
-        // headの格納されているメモリをLL/SC
+        // 포인터의 포인터를 취득
+        // head에 저장되어 있는 메모리를 LL/SC
         let head = &mut self.head as *mut *mut Node<T> as *mut u8 as usize;
 
-        // LL/SCを用いたpush <4>
+        // LL/SC를 이용한 push ❹
         unsafe {
             asm!("1:
                   ldxr {next}, [{head}] // next = *head
@@ -47,16 +47,16 @@ impl<T> StackHead<T> {
         };
     }
 
-    pub fn pop(&mut self) -> Option<T> { // <5>
+    pub fn pop(&mut self) -> Option<T> { // ❺
         unsafe {
-            // ポインタのポインタを取得
-            // headの格納されているメモリをLL/SC
+            // 포인터의 포인터를 취득
+            // head에 저장된 메모리를 LL/SC
             let head = &mut self.head as *mut *mut Node<T> as *mut u8 as usize;
 
-            // popしたノードへのアドレスを格納
+            // pop한 노드로의 주소를 저장
             let mut result: usize;
 
-            // LL/SCを用いたpop <6>
+            // LL/SC을 이용한 pop ❻
             asm!("1:
                   ldaxr {result}, [{head}] // result = *head
                   // if result != NULL then goto 2
@@ -82,7 +82,7 @@ impl<T> StackHead<T> {
             if result == 0 {
                 None
             } else {
-                // ポインタをBoxに戻して、中の値をリターン
+                // 포인터를 Box로 되돌리고, 안의 값을 리턴
                 let ptr = result as *mut u8 as *mut Node<T>;
                 let head = Box::from_raw(ptr);
                 Some((*head).data)
@@ -93,10 +93,10 @@ impl<T> StackHead<T> {
 
 impl<T> Drop for StackHead<T> {
     fn drop(&mut self) {
-        // データ削除
+        // 데이터 삭제
         let mut node = self.head;
         while node != null_mut() {
-            // ポインタをBoxに戻す操作を繰り返す
+            // 포인터를 Box로 되돌리는 조작을 반복함
             let n = unsafe { Box::from_raw(node) };
             node = n.next;
         }
@@ -105,7 +105,7 @@ impl<T> Drop for StackHead<T> {
 
 use std::cell::UnsafeCell;
 
-// StackHeadをUnsafeCellで保持するのみ
+// StackHead를 UnsafeCell로 저장
 pub struct Stack<T> {
     data: UnsafeCell<StackHead<T>>,
 }
@@ -122,6 +122,6 @@ impl<T> Stack<T> {
     }
 }
 
-// スレッド間のデータ共有と、チャネルを使った送受信が可能と設定
+// 스레드 사이의 데이터 공유 및 채널을 사용한 송수신이 가능하도록 설정
 unsafe impl<T> Sync for Stack<T> {}
 unsafe impl<T> Send for Stack<T> {}

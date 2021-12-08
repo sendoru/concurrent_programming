@@ -1,12 +1,12 @@
-use std::sync::mpsc::{channel, Sender}; // <1>
+use std::sync::mpsc::{channel, Sender}; // ❶
 
 fn main() {
     let mut v = Vec::new();
 
-    // チャネルを作成 <2>
+    // 채널을 작성 ❷
     let (tx, rx) = channel::<Sender<()>>();
 
-    // バリア同期用スレッド <3>
+    // 배리어 동기용 스레드 ❸
     let barrier = move || {
         let x = rx.recv().unwrap();
         let y = rx.recv().unwrap();
@@ -19,11 +19,11 @@ fn main() {
     let t = std::thread::spawn(barrier);
     v.push(t);
 
-    // クライアントスレッド <4>
+    // 클라이언트 스레드 ❹
     for _ in 0..3 {
-        let tx_c = tx.clone(); // <5>
+        let tx_c = tx.clone(); // ❺
         let node = move || {
-            // バリア同期 <6>
+            // 배리어 동기 ❻
             let (tx0, rx0) = channel();
             tx_c.send(tx0).unwrap();
             rx0.recv().unwrap();

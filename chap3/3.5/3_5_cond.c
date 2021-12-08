@@ -3,20 +3,20 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER; // <1>
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;  // <2>
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER; // ❶
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;  // ❷
 
-volatile bool ready = false; // <3>
-char buf[256]; // スレッド間でデータを受け渡すためのバッファ
+volatile bool ready = false; // ❸
+char buf[256]; // 스레드 사이에서 데이터를 주고 받기 위한 버퍼
 
-void* producer(void *arg) { // データ生成スレッド <4>
+void* producer(void *arg) { // 데이터 생성 스레드 ❹
     printf("producer: ");
-    fgets(buf, sizeof(buf), stdin); // 入力を受け取る
+    fgets(buf, sizeof(buf), stdin); // 입력을 받는다
 
     pthread_mutex_lock(&mut);
-    ready = true; // <5>
+    ready = true; // ❺
 
-    if (pthread_cond_broadcast(&cond) !=0) { // 全体に通知 <6>
+    if (pthread_cond_broadcast(&cond) !=0) { //전체에 알림 ❻
         perror("pthread_cond_broadcast"); exit(-1);
     }
 
@@ -24,12 +24,12 @@ void* producer(void *arg) { // データ生成スレッド <4>
     return NULL;
 }
 
-void* consumer(void *arg) { // データ消費スレッド <7>
+void* consumer(void *arg) { // 데이터 소비 스레드 ❼
     pthread_mutex_lock(&mut);
 
-    while (!ready) { // ready変数の値がfalseの場合に待機
-        // ロック解放と待機を同時に実行
-        if (pthread_cond_wait(&cond, &mut) != 0) { // <8>
+    while (!ready) { // ready 변수값이 false인 경우 대기
+        // 록 반환과 대기를 동시에 실행
+        if (pthread_cond_wait(&cond, &mut) != 0) { // ❽
             perror("pthread_cond_wait"); exit(-1);
         }
     }
@@ -40,19 +40,19 @@ void* consumer(void *arg) { // データ消費スレッド <7>
 }
 
 int main(int argc, char *argv[]) {
-    // スレッド生成
+    // 스레드 생성
     pthread_t pr, cn;
     pthread_create(&pr, NULL, producer, NULL);
     pthread_create(&cn, NULL, consumer, NULL);
 
-    // スレッドの終了を待機
+    // 스레드 종료 대기
     pthread_join(pr, NULL);
     pthread_join(cn, NULL);
 
-    // ミューテックスオブジェクトを解放
+    // 뮤텍스 객체 반환
     pthread_mutex_destroy(&mut);
 
-    // 条件変数オブジェクトを解放 <9>
+    // 조건 변수 객체 반환 ❾
     if (pthread_cond_destroy(&cond) != 0) {
         perror("pthread_cond_destroy"); return -1;
     }

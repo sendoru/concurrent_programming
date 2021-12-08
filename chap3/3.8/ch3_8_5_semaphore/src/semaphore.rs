@@ -1,6 +1,6 @@
 use std::sync::{Condvar, Mutex};
 
-// セマフォ用の型 <1>
+// 세마포용 타입 ❶
 pub struct Semaphore {
     mutex: Mutex<isize>,
     cond: Condvar,
@@ -8,7 +8,7 @@ pub struct Semaphore {
 }
 
 impl Semaphore {
-    pub fn new(max: isize) -> Self { // <2>
+    pub fn new(max: isize) -> Self { // ❷
         Semaphore {
             mutex: Mutex::new(0),
             cond: Condvar::new(),
@@ -17,16 +17,16 @@ impl Semaphore {
     }
 
     pub fn wait(&self) {
-        // カウントが最大値以上なら待機 <3>
+        // 카운터가 최댓값 이상이면 대기 ❸
         let mut cnt = self.mutex.lock().unwrap();
         while *cnt >= self.max {
             cnt = self.cond.wait(cnt).unwrap();
         }
-        *cnt += 1; // <4>
+        *cnt += 1; // ❹
     }
 
     pub fn post(&self) {
-        // カウントをデクリメント <5>
+        // 카운터를 디크리먼트 ❺
         let mut cnt = self.mutex.lock().unwrap();
         *cnt -= 1;
         if *cnt <= self.max {

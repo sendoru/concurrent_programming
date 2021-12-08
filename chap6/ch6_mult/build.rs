@@ -11,7 +11,7 @@ fn main() {
     Command::new("ar").args(&["crus", LIB_FILE, O_FILE])
                       .status().unwrap();
 
-    println!("cargo:rustc-link-search=native={}", "asm"); // asmをライブラリ検索パスに追加
-    println!("cargo:rustc-link-lib=static=context");  // libcontext.aという静的ライブラリをリンク
-    println!("cargo:rerun-if-changed=asm/context.S"); // asm/context.Sというファイルに依存
+    println!("cargo:rustc-link-search=native={}", "asm"); // asm을 라이브러리 검색 경로에 추가
+    println!("cargo:rustc-link-lib=static=context");  // libcontext.a라는 정적 라이브러리 링크
+    println!("cargo:rerun-if-changed=asm/context.S"); // asm/context.S라는 파일에 의존
 }

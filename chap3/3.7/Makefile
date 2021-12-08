@@ -6,7 +6,7 @@ targets = 3_7_1_rwlock_spin.o 3_7_2_rwlock_pthreads \
 CFLAGS = -O3
 LDFLAGS = -pthread
 
-# 以下の値を変更して再コンパイルすると、ソースコード中の値も変更される
+# 다음 값을 변경하고 재컴파일 하면 소스 코드의 값도 변경된다
 NUM_THREAD = 4
 HOLDTIME = 100
 DEFS = -DNUM_THREAD=$(NUM_THREAD) -DHOLDTIME=$(HOLDTIME)

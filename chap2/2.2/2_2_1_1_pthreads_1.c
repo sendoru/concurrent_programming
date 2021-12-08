@@ -1,24 +1,24 @@
-#include <pthread.h> // <1>
+#include <pthread.h> // ❶
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#define NUM_THREADS 10 // 生成するスレッドの数
+#define NUM_THREADS 10 // 생성할 스레드 수
 
-// スレッド用関数
-void *thread_func(void *arg) { // <2>
-    int id = (int)arg; // <3>
-    for (int i = 0; i < 5; i++) { // <4>
+// 스레드용 함수
+void *thread_func(void *arg) { // ❷
+    int id = (int)arg; // ❸
+    for (int i = 0; i < 5; i++) { // ❹
         printf("id = %d, i = %d\n", id, i);
         sleep(1);
     }
 
-    return "finished!"; // 返り値
+    return "finished!"; // 반환값
 }
 
 int main(int argc, char *argv[]) {
-    pthread_t v[NUM_THREADS]; // <5>
-    // スレッド生成 <6>
+    pthread_t v[NUM_THREADS]; // ⑤
+    // 스레드 생성 ⑥
     for (int i = 0; i < NUM_THREADS; i++) {
         if (pthread_create(&v[i], NULL, thread_func, (void *)i) != 0) {
             perror("pthread_create");
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // スレッドの終了を待機 <7>
+    // 스레드 종료 대기 ⑦
     for (int i = 0; i < NUM_THREADS; i++) {
         char *ptr;
         if (pthread_join(v[i], (void **)&ptr) == 0) {

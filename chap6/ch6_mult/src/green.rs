@@ -5,44 +5,44 @@ use std::collections::{HashMap, HashSet, LinkedList};
 use std::ffi::c_void;
 use std::ptr;
 
-// すべてのスレッド終了時に戻ってくる先 <1>
+// 모든 스레드 종료 시 돌아올 위치 ❶
 static mut CTX_MAIN: Option<Box<Registers>> = None;
 
-// 不要なスタック領域 <2>
+// 불필요한 스택 영역 ❷
 static mut UNUSED_STACK: (*mut u8, Layout) = (ptr::null_mut(), Layout::new::<u8>());
 
-// スレッドの実行キュー <3>
+// 스레드 실행 큐 ❸
 static mut CONTEXTS: LinkedList<Box<Context>> = LinkedList::new();
 
-// スレッドIDの集合 <4>
+// 스레드 ID 집합 ❹
 static mut ID: *mut HashSet<u64> = ptr::null_mut();
 
-// メッセージキュー <1>
+// 메시지 큐 ❶
 static mut MESSAGES: *mut MappedList<u64> = ptr::null_mut();
 
-// 待機スレッド集合 <2>
+// 대기 스레드 집합❷
 static mut WAITING: *mut HashMap<u64, Box<Context>> = ptr::null_mut();
 
-#[repr(C)] // <1>
-struct Registers { // <2>
-    // callee保存レジスタ
+#[repr(C)] // ❶
+struct Registers { // ❷
+    // callee 저장 레지스터
      d8: u64,  d9: u64, d10: u64, d11: u64, d12: u64,
     d13: u64, d14: u64, d15: u64, x19: u64, x20: u64,
     x21: u64, x22: u64, x23: u64, x24: u64, x25: u64,
     x26: u64, x27: u64, x28: u64,
 
-    x30: u64, // リンクレジスタ
-    sp: u64,  // スタックポインタ
+    x30: u64, // 링크 레지스터
+    sp: u64,  // 스택 레지스터
 }
 
 impl Registers {
-    fn new(sp: u64) -> Self { // <3>
+    fn new(sp: u64) -> Self { // ❸
         Registers {
              d8: 0,  d9: 0, d10: 0, d11: 0, d12: 0,
             d13: 0, d14: 0, d15: 0, x19: 0, x20: 0,
             x21: 0, x22: 0, x23: 0, x24: 0, x25: 0,
             x26: 0, x27: 0, x28: 0,
-            x30: entry_point as u64, // <4>
+            x30: entry_point as u64, // ❹
             sp,
         }
     }
@@ -53,13 +53,13 @@ extern "C" {
     fn switch_context(ctx: *const Registers) -> !;
 }
 
-// スレッド開始時に実行する関数の型
-type Entry = fn(); // <1>
+// 스레드 개시 시 실행하는 함수 타입
+type Entry = fn(); // ❶
 
-// ページサイズ。Linuxだと4KiB
-const PAGE_SIZE: usize = 4 * 1024; // 4KiB <2>
+// 페이지 크기. Linux에서는 4KiB
+const PAGE_SIZE: usize = 4 * 1024; // 4KiB ❷
 
-struct MappedList<T> { // <1>
+struct MappedList<T> { // ❶
     map: HashMap<u64, LinkedList<T>>,
 }
 
@@ -70,20 +70,20 @@ impl<T> MappedList<T> {
         }
     }
 
-    // keyに対応するリストの最後尾に追加 <2>
+    // key에 대응하는 리스트의 가장 마지막에 추가 ❷
     fn push_back(&mut self, key: u64, val: T) {
         if let Some(list) = self.map.get_mut(&key) {
-            // 対応するリストが存在するなら追加
+            // 대응하는 리스트가 존재하면 추가
             list.push_back(val);
         } else {
-            // 存在しない場合、新たにリストを作成して追加
+            // 존재하지 않는 경우, 새롭게 리스트를 작성하고 추가
             let mut list = LinkedList::new();
             list.push_back(val);
             self.map.insert(key, list);
         }
     }
 
-    // keyに対応するリストの一番前から取り出す <3>
+    // key에 대응하는 리스트의 가장 처음부터 꺼낸다 ❸
     fn pop_front(&mut self, key: u64) -> Option<T> {
         if let Some(list) = self.map.get_mut(&key) {
             let val = list.pop_front();
@@ -101,17 +101,17 @@ impl<T> MappedList<T> {
     }
 }
 
-// コンテキスト <3>
+// 컨텍스트 ❸
 struct Context {
-    regs: Registers,      // レジスタ
-    stack: *mut u8,       // スタック
-    stack_layout: Layout, // スタックレイアウト
-    entry: Entry,         // エントリポイント
-    id: u64,              // スレッドID
+    regs: Registers,      // 레지스터
+    stack: *mut u8,       // 스택
+    stack_layout: Layout, // 스택 레이아웃
+    entry: Entry,         // 엔트리포인트
+    id: u64,              // 스레드 ID
 }
 
 impl Context {
-    // レジスタ情報へのポインタを取得
+    // 레지스터 정보로의 포인터 취득
     fn get_regs_mut(&mut self) -> *mut Registers {
         &mut self.regs as *mut Registers
     }
@@ -120,18 +120,18 @@ impl Context {
         &self.regs as *const Registers
     }
 
-    fn new(func: Entry, stack_size: usize, id: u64) -> Self { // <4>
-        // スタック領域の確保 <5>
+    fn new(func: Entry, stack_size: usize, id: u64) -> Self { // ❹
+        // 스택 영역 확보 ❺
         let layout = Layout::from_size_align(stack_size, PAGE_SIZE).unwrap();
         let stack = unsafe { alloc(layout) };
 
-        // ガードページの設定 <6>
+        // 가드 페이지 설정 ❻
         unsafe { mprotect(stack as *mut c_void, PAGE_SIZE, ProtFlags::PROT_NONE).unwrap() };
 
-        // レジスタの初期化 <7>
+        // 레지스터 초기화 ❼
         let regs = Registers::new(stack as u64 + stack_size as u64);
 
-        // コンテキストの初期化
+        // 컨텍스트 초기화
         Context {
             regs: regs,
             stack: stack,
@@ -144,95 +144,95 @@ impl Context {
 
 fn get_id() -> u64 {
     loop {
-        let rnd = rand::random::<u64>(); // <1>
+        let rnd = rand::random::<u64>(); // ❶
         unsafe {
-            if !(*ID).contains(&rnd) { // <2>
-                (*ID).insert(rnd); // <3>
+            if !(*ID).contains(&rnd) { // ❷
+                (*ID).insert(rnd); // ❸
                 return rnd;
             };
         }
     }
 }
 
-pub fn spawn(func: Entry, stack_size: usize) -> u64 { // <1>
+pub fn spawn(func: Entry, stack_size: usize) -> u64 { // ❶
     unsafe {
-        let id = get_id(); // <2>
-        CONTEXTS.push_back(Box::new(Context::new(func, stack_size, id))); // <3>
-        schedule(); // <4>
-        id // <5>
+        let id = get_id(); // ❷
+        CONTEXTS.push_back(Box::new(Context::new(func, stack_size, id))); // ❸
+        schedule(); // ❹
+        id // ❺
     }
 }
 
 pub fn schedule() {
     unsafe {
-        // 実行可能なプロセスが自身のみであるため即座にリターン <1>
+        // 실행 가능한 프로세스가 자신뿐이므로 즉시 리턴 ❶
         if CONTEXTS.len() == 1 {
             return;
         }
 
-        // 自身のコンテキストを実行キューの最後に移動
-        let mut ctx = CONTEXTS.pop_front().unwrap(); // <2>
-        // レジスタ保存領域へのポインタを取得 <3>
+        // 자신의 컨텍스트를 실행 큐의 맨 끝으로 이동
+        let mut ctx = CONTEXTS.pop_front().unwrap(); // ❷
+        // レジスタ保存領域へのポインタを取得 ❸
         let regs = ctx.get_regs_mut();
         CONTEXTS.push_back(ctx);
 
-        // レジスタを保存 <4>
+        // 레지스터를 보존 ❹
         if set_context(regs) == 0 {
-            // 次のスレッドにコンテキストスイッチ
+            // 다음 스레드로 컨텍스트 스위칭
             let next = CONTEXTS.front().unwrap();
             switch_context((**next).get_regs());
         }
 
-        // 不要なスタック領域を削除
-        rm_unused_stack(); // <5>
+        // 불필요한 스택 영역을 삭제
+        rm_unused_stack(); // ❺
     }
 }
 
 extern "C" fn entry_point() {
     unsafe {
-        // 指定されたエントリ関数を実行 <1>
+        // 지정된 엔트리 함수를 실행 ❶
         let ctx = CONTEXTS.front().unwrap();
         ((**ctx).entry)();
 
-        // 以降がスレッド終了時の後処理
+        // 아래는 스레드 종료 시 후처리
 
-        // 自身のコンテキストを取り除く
+        // 자신의 컨텍스트를 제거
         let ctx = CONTEXTS.pop_front().unwrap();
 
-        // スレッドIDを削除
+        // 스레드 ID를 삭제
         (*ID).remove(&ctx.id);
 
-        // 不要なスタック領域として保存
-        // この段階で解放すると、以降のコードでスタックが使えなくなくなる
-        UNUSED_STACK = ((*ctx).stack, (*ctx).stack_layout); // <2>
+        // 불필요한 스택 영역으로서 보존
+        // 이 단계에서 해제하면 다음 코드에서 스택을 사용할 수 없게 됨
+        UNUSED_STACK = ((*ctx).stack, (*ctx).stack_layout); // ❷
 
-        match CONTEXTS.front() { // <3>
+        match CONTEXTS.front() { // ❸
             Some(c) => {
-                // 次のスレッドにコンテキストスイッチ
+                // 다음 스레드로 컨텍스트 스위칭
                 switch_context((**c).get_regs());
             }
             None => {
-                // すべてのスレッドが終了した場合、main関数のスレッドに戻る
+                // 모든 스레드가 종료되었다면 main 함수의 스레드로 돌아감
                 if let Some(c) = &CTX_MAIN {
                     switch_context(&**c as *const Registers);
                 }
             }
         };
     }
-    panic!("entry_point"); // <4>
+    panic!("entry_point"); // ❹
 }
 
 pub fn spawn_from_main(func: Entry, stack_size: usize) {
     unsafe {
-        // すでに初期化済みならエラーとする
+        // 이미 초기화를 했다면 에러가 된다
         if let Some(_) = &CTX_MAIN {
             panic!("spawn_from_main is called twice");
         }
 
-        // main関数用のコンテキストを生成
+        // main 함수용 컨텍스트를 생성
         CTX_MAIN = Some(Box::new(Registers::new(0)));
         if let Some(ctx) = &mut CTX_MAIN {
-            // グローバル変数を初期化 <1>
+            // 글로벌 변수를 초기화 ❶
             let mut msgs = MappedList::new();
             MESSAGES = &mut msgs as *mut MappedList<u64>;
 
@@ -242,25 +242,25 @@ pub fn spawn_from_main(func: Entry, stack_size: usize) {
             let mut ids = HashSet::new();
             ID = &mut ids as *mut HashSet<u64>;
 
-            // すべてのスレッド終了時の戻り先を保存 <2>
+            // 모든 스레드 종료 시 돌아갈 위치를 저장 ❷
             if set_context(&mut **ctx as *mut Registers) == 0 {
-                // 最初に起動するスレッドのコンテキストを生成して実行 <3>
+                // 최초에 실행하는 스레드의 컨텍스트를 생성 ❸
                 CONTEXTS.push_back(Box::new(Context::new(func, stack_size, get_id())));
                 let first = CONTEXTS.front().unwrap();
                 switch_context(first.get_regs());
             }
 
-            // 不要なスタックを解放 <4>
+            // 불필요한 스택을 해제 ❹
             rm_unused_stack();
 
-            // グローバル変数をクリア
+            // 글로벌 변수 클리어
             CTX_MAIN = None;
             CONTEXTS.clear();
             MESSAGES = ptr::null_mut();
             WAITING = ptr::null_mut();
             ID = ptr::null_mut();
 
-            msgs.clear(); // <5>
+            msgs.clear(); // ❺
             waiting.clear();
             ids.clear();
         }
@@ -269,62 +269,62 @@ pub fn spawn_from_main(func: Entry, stack_size: usize) {
 
 unsafe fn rm_unused_stack() {
     if UNUSED_STACK.0 != ptr::null_mut() {
-        // スタック領域の保護を解除 <1>
+        // 스택 영역 보호 해제 ❶
         mprotect(
             UNUSED_STACK.0 as *mut c_void,
             PAGE_SIZE,
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
         )
         .unwrap();
-        // スタック領域解放 <2>
+        // ス스택 영역 해제 ❷
         dealloc(UNUSED_STACK.0, UNUSED_STACK.1);
         UNUSED_STACK = (ptr::null_mut(), Layout::new::<u8>());
     }
 }
 
-pub fn send(key: u64, msg: u64) { // <1>
+pub fn send(key: u64, msg: u64) { // ❶
     unsafe {
-        // メッセージキューの最後尾に追加
+        // 메시지 큐의 맨 끝에 추가
         (*MESSAGES).push_back(key, msg);
 
-        // スレッドが受信待ちの場合に実行キューに移動
+        //스레드 수신 대기 시 실행 큐로 이동
         if let Some(ctx) = (*WAITING).remove(&key) {
             CONTEXTS.push_back(ctx);
         }
     }
-    schedule(); // <2>
+    schedule(); // ❷
 }
 
 pub fn recv() -> Option<u64> {
     unsafe {
-        // スレッドIDを取得
+        // 스레드 ID를 취득
         let key = CONTEXTS.front().unwrap().id;
 
-        // メッセージがすでにキューにある場合即座にリターン
+        // 메시지가 이미 큐에 있으면 즉시 리턴
         if let Some(msg) = (*MESSAGES).pop_front(key) {
             return Some(msg);
         }
 
-        // 実行可能なスレッドが他にいない場合はデッドロック
+        // 실행 가능한 스레드가 달리 없으면 데드록
         if CONTEXTS.len() == 1 {
             panic!("deadlock");
         }
 
-        // 実行中のスレッドを受信待ち状態に移行
+        // 실행 중 스레드를 수신 대기 상대로 이동
         let mut ctx = CONTEXTS.pop_front().unwrap();
         let regs = ctx.get_regs_mut();
         (*WAITING).insert(key, ctx);
 
-        // 次の実行可能なスレッドにコンテキストスイッチ
+        // 다음 실행 가능한 스레드로 컨텍스트 스위칭
         if set_context(regs) == 0 {
             let next = CONTEXTS.front().unwrap();
             switch_context((**next).get_regs());
         }
 
-        // 不要なスタックを削除
+        // 불필요한 스택을 삭제
         rm_unused_stack();
 
-        // 受信したメッセージを取得
+        // 수신한 메시지를 취득
         (*MESSAGES).pop_front(key)
     }
 }
