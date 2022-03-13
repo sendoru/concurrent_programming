@@ -12,6 +12,7 @@
 - [7장 동기처리 2](./chap7/)
 - [8장 동시 계산 모델](./chap8/)
 - [부록 A AArch64 아키텍처](./appendix_A/)
+- [URL 모음](./references/)
 
 ## 주의 사항
 
