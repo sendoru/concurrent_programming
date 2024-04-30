@@ -7,6 +7,13 @@
 #define MAX_DEPTH 4
 #define INSERTION_SORT_THRESHOLD 32
 
+struct merge_sort_args {
+    int *arr;
+    int left;
+    int right;
+    int depth;
+};
+
 // if segment is small enough, use insertion sort
 void insertion_sort(int *arr, int left, int right)
 {
@@ -82,11 +89,10 @@ void merge_sort_single_thread(int *arr, int left, int right)
 
 void *__merge_sort_multi_thread(void *arg)
 {
-    int *arg_ = (int *)arg;
-    int *arr = *(int **)arg;
-    int left = arg_[2];
-    int right = arg_[3];
-    int depth = arg_[4];
+    int *arr = ((struct merge_sort_args *)arg)->arr;
+    int left = ((struct merge_sort_args *)arg)->left;
+    int right = ((struct merge_sort_args *)arg)->right;
+    int depth = ((struct merge_sort_args *)arg)->depth;
 
     if (right - left + 1 <= INSERTION_SORT_THRESHOLD) {
         insertion_sort(arr, left, right);
@@ -139,8 +145,14 @@ void *__merge_sort_multi_thread(void *arg)
 // warning: parent thread should wait for child threads to finish
 void merge_sort_multi_thread(int *arr, int left, int right)
 {
-    int arg[5] = {0, 0, left, right, 0};
-    *(int **)arg = arr;
+    // int arg[5] = {0, 0, left, right, 0};
+    // *(int **)arg = arr;
+    struct merge_sort_args *arg =
+        (struct merge_sort_args *)malloc(sizeof(struct merge_sort_args));
+    arg->arr = arr;
+    arg->left = left;
+    arg->right = right;
+    arg->depth = 0;
     __merge_sort_multi_thread((void *)arg);
 }
 
@@ -180,8 +192,8 @@ int main(int argc, char *argv[])
     // clock() function is not accurate when multi-threading is used instead,
     // use gettimeofday() function or clock_gettime() function
     clock_gettime(CLOCK_REALTIME, &start);
-    int arg[5] = {0, 0, 0, n - 1, 0};
-    *(int **)arg = arr;
+
+    // *(int **)arg = arr;
     merge_sort_multi_thread(arr, 0, n - 1);
     clock_gettime(CLOCK_REALTIME, &end);
     printf("Time for multi-thread merge sort: %lf\n",

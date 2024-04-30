@@ -596,27 +596,32 @@ merge_sort_multi_thread:
 .LFB44:
 	.cfi_startproc
 	endbr64
-	subq	$40, %rsp
-	.cfi_def_cfa_offset 48
-	movq	%fs:40, %rax
-	movq	%rax, 24(%rsp)
-	xorl	%eax, %eax
-	movq	%rdi, (%rsp)
-	movq	%rsp, %rdi
-	movl	%esi, 8(%rsp)
-	movl	%edx, 12(%rsp)
-	movl	$0, 16(%rsp)
-	call	__merge_sort_multi_thread
-	movq	24(%rsp), %rax
-	xorq	%fs:40, %rax
-	jne	.L91
-	addq	$40, %rsp
-	.cfi_remember_state
+	pushq	%r12
+	.cfi_def_cfa_offset 16
+	.cfi_offset 12, -16
+	movq	%rdi, %r12
+	movl	$24, %edi
+	pushq	%rbp
+	.cfi_def_cfa_offset 24
+	.cfi_offset 6, -24
+	movl	%esi, %ebp
+	pushq	%rbx
+	.cfi_def_cfa_offset 32
+	.cfi_offset 3, -32
+	movl	%edx, %ebx
+	call	malloc@PLT
+	movq	%r12, (%rax)
+	movq	%rax, %rdi
+	movl	%ebp, 8(%rax)
+	movl	%ebx, 12(%rax)
+	movl	$0, 16(%rax)
+	popq	%rbx
+	.cfi_def_cfa_offset 24
+	popq	%rbp
+	.cfi_def_cfa_offset 16
+	popq	%r12
 	.cfi_def_cfa_offset 8
-	ret
-.L91:
-	.cfi_restore_state
-	call	__stack_chk_fail@PLT
+	jmp	__merge_sort_multi_thread
 	.cfi_endproc
 .LFE44:
 	.size	merge_sort_multi_thread, .-merge_sort_multi_thread
@@ -670,13 +675,13 @@ main:
 	pushq	%rbx
 	.cfi_def_cfa_offset 56
 	.cfi_offset 3, -56
-	subq	$104, %rsp
-	.cfi_def_cfa_offset 160
+	subq	$88, %rsp
+	.cfi_def_cfa_offset 144
 	movq	%fs:40, %rax
-	movq	%rax, 88(%rsp)
+	movq	%rax, 72(%rsp)
 	xorl	%eax, %eax
 	cmpl	$1, %edi
-	jle	.L117
+	jle	.L115
 	movq	8(%rsi), %rdi
 	movl	$10, %edx
 	xorl	%esi, %esi
@@ -689,7 +694,7 @@ main:
 	call	malloc@PLT
 	movq	%rax, %r14
 	testl	%r13d, %r13d
-	jle	.L95
+	jle	.L93
 	movq	%rax, %rbp
 	leal	-1(%r13), %eax
 	leal	0(%r13,%r13,2), %ebx
@@ -699,14 +704,14 @@ main:
 	movq	%rax, 24(%rsp)
 	.p2align 4,,10
 	.p2align 3
-.L96:
+.L94:
 	call	rand@PLT
 	addq	$4, %r15
 	cltd
 	idivl	%ebx
 	movl	%edx, -4(%r15)
 	cmpq	%r12, %r15
-	jne	.L96
+	jne	.L94
 	movq	16(%rsp), %rdi
 	call	malloc@PLT
 	movq	24(%rsp), %rcx
@@ -716,13 +721,13 @@ main:
 	leaq	4(,%rcx,4), %rdx
 	call	memcpy@PLT
 	cmpl	$100, %r13d
-	jg	.L118
+	jg	.L116
 	leaq	.LC11(%rip), %rdi
 	leaq	.LC3(%rip), %rbx
 	call	puts@PLT
 	.p2align 4,,10
 	.p2align 3
-.L98:
+.L96:
 	movl	0(%rbp), %edx
 	movq	%rbx, %rsi
 	movl	$1, %edi
@@ -730,30 +735,28 @@ main:
 	addq	$4, %rbp
 	call	__printf_chk@PLT
 	cmpq	%r12, %rbp
-	jne	.L98
-.L108:
+	jne	.L96
+.L106:
 	movl	$10, %edi
 	call	putchar@PLT
-	jmp	.L99
-.L118:
+	jmp	.L97
+.L116:
 	movl	%r13d, %edx
 	leaq	.LC4(%rip), %rsi
 	movl	$1, %edi
 	xorl	%eax, %eax
 	call	__printf_chk@PLT
-.L99:
+.L97:
 	leaq	32(%rsp), %r12
 	xorl	%edi, %edi
 	leaq	48(%rsp), %rbp
 	movq	%r12, %rsi
 	call	clock_gettime@PLT
 	movl	12(%rsp), %ebx
-	leaq	64(%rsp), %rdi
-	movl	$0, 72(%rsp)
-	movl	$0, 80(%rsp)
-	movl	%ebx, 76(%rsp)
-	movq	%r14, 64(%rsp)
-	call	__merge_sort_multi_thread
+	xorl	%esi, %esi
+	movq	%r14, %rdi
+	movl	%ebx, %edx
+	call	merge_sort_multi_thread
 	xorl	%edi, %edi
 	movq	%rbp, %rsi
 	call	clock_gettime@PLT
@@ -796,35 +799,35 @@ main:
 	addsd	%xmm1, %xmm0
 	call	__printf_chk@PLT
 	cmpl	$100, %r13d
-	jle	.L119
-.L100:
+	jle	.L117
+.L98:
 	movl	12(%rsp), %eax
 	testl	%eax, %eax
-	jle	.L103
+	jle	.L101
 	leal	-2(%r13), %ecx
 	movl	(%r14), %edx
 	leaq	4(%r14), %rax
 	leaq	8(%r14,%rcx,4), %rsi
-	jmp	.L105
+	jmp	.L103
 	.p2align 4,,10
 	.p2align 3
-.L104:
+.L102:
 	addq	$4, %rax
 	cmpq	%rsi, %rax
-	je	.L103
-.L105:
+	je	.L101
+.L103:
 	movl	%edx, %ecx
 	movl	(%rax), %edx
 	cmpl	%ecx, %edx
-	jge	.L104
+	jge	.L102
 	leaq	.LC9(%rip), %rdi
 	call	puts@PLT
 	xorl	%eax, %eax
-.L92:
-	movq	88(%rsp), %rcx
+.L90:
+	movq	72(%rsp), %rcx
 	xorq	%fs:40, %rcx
-	jne	.L120
-	addq	$104, %rsp
+	jne	.L118
+	addq	$88, %rsp
 	.cfi_remember_state
 	.cfi_def_cfa_offset 56
 	popq	%rbx
@@ -840,24 +843,24 @@ main:
 	popq	%r15
 	.cfi_def_cfa_offset 8
 	ret
-.L103:
+.L101:
 	.cfi_restore_state
 	leaq	.LC10(%rip), %rdi
 	call	puts@PLT
 	xorl	%eax, %eax
-	jmp	.L92
-.L119:
+	jmp	.L90
+.L117:
 	leaq	.LC8(%rip), %rdi
 	call	puts@PLT
 	testl	%r13d, %r13d
-	jle	.L101
+	jle	.L99
 	movl	12(%rsp), %eax
 	movq	%r14, %rbx
 	leaq	.LC3(%rip), %rbp
 	leaq	4(%r14,%rax,4), %r12
 	.p2align 4,,10
 	.p2align 3
-.L102:
+.L100:
 	movl	(%rbx), %edx
 	movq	%rbp, %rsi
 	movl	$1, %edi
@@ -865,12 +868,12 @@ main:
 	addq	$4, %rbx
 	call	__printf_chk@PLT
 	cmpq	%rbx, %r12
-	jne	.L102
-.L101:
+	jne	.L100
+.L99:
 	movl	$10, %edi
 	call	putchar@PLT
-	jmp	.L100
-.L95:
+	jmp	.L98
+.L93:
 	movq	16(%rsp), %rdi
 	call	malloc@PLT
 	leaq	.LC11(%rip), %rdi
@@ -878,15 +881,15 @@ main:
 	call	puts@PLT
 	leal	-1(%r13), %eax
 	movl	%eax, 12(%rsp)
-	jmp	.L108
-.L117:
+	jmp	.L106
+.L115:
 	movq	(%rsi), %rdx
 	movl	$1, %edi
 	leaq	.LC2(%rip), %rsi
 	call	__printf_chk@PLT
 	orl	$-1, %eax
-	jmp	.L92
-.L120:
+	jmp	.L90
+.L118:
 	call	__stack_chk_fail@PLT
 	.cfi_endproc
 .LFE45:
